@@ -1,0 +1,59 @@
+---
+title: "Resample Tool With R"
+output: html_notebook
+---
+
+# Reading in and preparing data 
+
+When running the notebooks on VITO’s servers, the user can follow the directions shown in 
+https://nbviewer.jupyter.org/github/VITObelgium/notebook-samples/raw/master/datasets/probav/Reading%20PROBA-V%20using%20R.ipynb to find locations of PROBA-V products. Doing so, the data set (netCDF files) will be located and available in the VITO's servers.
+
+Alternatively, when working locally, the R-user can choose to automatically download Copernicus land data (https://land.copernicus.eu/global/) using the functions found in https://github.com/cgls/Copernicus-Global-Land-Service-Data-Download-with-R. 
+
+Once the data set is available, *raster* package functionality is used to prepare it for resampling. 
+
+```{r}
+library(raster)
+
+# ndvi_files is a list of the available files (netCFD)
+# r300m <- substring(ndvi_files[1],6)  # ndvi300m is the filename of the object to be processed
+r <- raster(r300m)
+
+```
+
+
+The original netCDF file might contain flagged data corresponding to NoData (NA), etc, which needs to be dealt with. In case of the NDVI products and netCDF files, assigned values > 250 are flagged and need to be converted into NA. When netCDF files are read in as a *Raster*\* object and values transformed into real NDVI values, the cuttoff for flagged cells is 0.92. Therefore, all cells > 0.92 have to be set to NA.
+
+```{r}
+
+if(grepl("ndvi", ndvi_files[1], ignore.case = TRUE)){
+  cuttoff_flag <- 0.92
+}else{
+  stop("Please define 'cuttoff_flag' (cuttoff value for flagged cells) for the Raster* object")
+}
+
+r[r > cuttoff_flag] <- NA
+
+```
+
+
+
+# Resampling using the aggregation approach
+
+There are several approaches to resample data to a coarser resolution. The area-based aggregation methods are based in grouping rectangular areas of cells of the finer resolution image to create a new map with larger cells. To do that, the function *aggregate()* of the package *raster* needs to know the factor of aggregation. In this case, the factor is 3 as it needs to go from 333m to 1km. In addition, *aggregate()* can perform the calculation using different functions. While the default is the average (*mean()*) it can work also with *modal()*, *max()* or *min()*.
+
+As for the pixel coordinate definition for both the 300m and the 1km products, no proper aggregation of
+the finer resolution product can be performed at the minimum and maximum latitude and longitude[^1]
+
+
+
+
+
+
+
+
+
+
+
+
+[^1]: Erwin Wolters, Wouter Dierckx, Marian-Daniel Iordache, and Else Swinnen. (16/03/2018) PROBA-V Products User Manual v3.01. http://proba-v.vgt.vito.be/sites/proba-v.vgt.vito.be/files/products_user_manual.pdf
