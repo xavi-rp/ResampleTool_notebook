@@ -1774,12 +1774,12 @@ $(document).ready(function () {
 <p>Once the data set is available, <em>raster</em> package functionality is used to prepare it for resampling.</p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubGlicmFyeShyYXN0ZXIpXG5cbiMgbmR2aV9maWxlcyBpcyBhIGxpc3Qgb2YgdGhlIGF2YWlsYWJsZSBmaWxlcyAobmV0Q0ZEKVxuIyByMzAwbSA8LSBzdWJzdHJpbmcobmR2aV9maWxlc1sxXSw2KSAgIyBuZHZpMzAwbSBpcyB0aGUgZmlsZW5hbWUgb2YgdGhlIG9iamVjdCB0byBiZSBwcm9jZXNzZWRcbnIgPC0gcmFzdGVyKHIzMDBtKVxuXG5gYGAifQ== -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubGlicmFyeShyYXN0ZXIpXG5cbiMgbmR2aV9maWxlcyBpcyBhIGxpc3Qgb2YgdGhlIGF2YWlsYWJsZSBmaWxlcyAobmV0Q0ZEIG9yIFJhc3Rlciogb2JqZWN0cylcbm5kdmlfZmlsZXMgPC0gbGlzdChwYXN0ZTAoXCIvVXNlcnMveGF2aV9ycC9Eb2N1bWVudHMvRDZfTFBEL05EVklfcmVzYW1wbGVcIiwgXCIvbmR2aTMwMG1fQ2F0LnRpZlwiKSlcbnIgPC0gcmFzdGVyKG5kdmlfZmlsZXNbMV0pXG5cbmBgYCJ9 -->
 <pre class="r"><code>library(raster)
 
-# ndvi_files is a list of the available files (netCFD)
-# r300m &lt;- substring(ndvi_files[1],6)  # ndvi300m is the filename of the object to be processed
-r &lt;- raster(r300m)
+# ndvi_files is a list of the available files (netCFD or Raster* objects)
+ndvi_files &lt;- list(paste0(&quot;/Users/xavi_rp/Documents/D6_LPD/NDVI_resample&quot;, &quot;/ndvi300m_Cat.tif&quot;))
+r &lt;- raster(ndvi_files[1])
 </code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
@@ -1787,9 +1787,8 @@ r &lt;- raster(r300m)
 <p>The original netCDF file might contain flagged data corresponding to NoData (NA), etc, which needs to be dealt with. In case of the NDVI products and netCDF files, assigned values &gt; 250 are flagged and need to be converted into NA. When netCDF files are read in as a <em>Raster</em>* object and values transformed into real NDVI values, the cuttoff for flagged cells is 0.92. Therefore, all cells &gt; 0.92 have to be set to NA.</p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuXG5pZihncmVwbChcIm5kdmlcIiwgbmR2aV9maWxlc1sxXSwgaWdub3JlLmNhc2UgPSBUUlVFKSl7XG4gIGN1dHRvZmZfZmxhZyA8LSAwLjkyXG59ZWxzZXtcbiAgc3RvcChcIlBsZWFzZSBkZWZpbmUgJ2N1dHRvZmZfZmxhZycgKGN1dHRvZmYgdmFsdWUgZm9yIGZsYWdnZWQgY2VsbHMpIGZvciB0aGUgUmFzdGVyKiBvYmplY3RcIilcbn1cblxucltyID4gY3V0dG9mZl9mbGFnXSA8LSBOQVxuXG5gYGAifQ== -->
-<pre class="r"><code>
-if(grepl(&quot;ndvi&quot;, ndvi_files[1], ignore.case = TRUE)){
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuaWYoZ3JlcGwoXCJuZHZpXCIsIG5kdmlfZmlsZXNbMV0sIGlnbm9yZS5jYXNlID0gVFJVRSkpe1xuICBjdXR0b2ZmX2ZsYWcgPC0gMC45MlxufWVsc2V7XG4gIHN0b3AoXCJQbGVhc2UgZGVmaW5lICdjdXR0b2ZmX2ZsYWcnIChjdXR0b2ZmIHZhbHVlIGZvciBmbGFnZ2VkIGNlbGxzKSBmb3IgdGhlIFJhc3Rlciogb2JqZWN0XCIpXG59XG5cbnJbciA+IGN1dHRvZmZfZmxhZ10gPC0gTkFcblxuYGBgIn0= -->
+<pre class="r"><code>if(grepl(&quot;ndvi&quot;, ndvi_files[1], ignore.case = TRUE)){
   cuttoff_flag &lt;- 0.92
 }else{
   stop(&quot;Please define &#39;cuttoff_flag&#39; (cuttoff value for flagged cells) for the Raster* object&quot;)
@@ -1804,7 +1803,59 @@ r[r &gt; cuttoff_flag] &lt;- NA
 <div id="resampling-using-the-aggregation-approach" class="section level1">
 <h1>Resampling using the aggregation approach</h1>
 <p>There are several approaches to resample data to a coarser resolution. The area-based aggregation methods are based in grouping rectangular areas of cells of the finer resolution image to create a new map with larger cells. To do that, the function <em>aggregate()</em> of the package <em>raster</em> needs to know the factor of aggregation. In this case, the factor is 3 as it needs to go from 333m to 1km. In addition, <em>aggregate()</em> can perform the calculation using different functions. While the default is the average (<em>mean()</em>) it can work also with <em>modal()</em>, <em>max()</em> or <em>min()</em>.</p>
-<p>As for the pixel coordinate definition for both the 300m and the 1km products, no proper aggregation of the finer resolution product can be performed at the minimum and maximum latitude and longitude<a href="#fn1" class="footnote-ref" id="fnref1"><sup>1</sup></a></p>
+<p>As for the pixel coordinate definition for both the 300m and the 1km products, no proper aggregation of the finer resolution product can be performed at the minimum and maximum latitude and longitude<a href="#fn1" class="footnote-ref" id="fnref1"><sup>1</sup></a>. For this reason, the <em>RasterLayer</em> object needs to be ‘cropped’ accordingly.</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuaWYoZXh0ZW50KHIpWzFdIDwgLTE4MCAmIGV4dGVudChyKVsyXSA+IDE3OS45OTcpeyAgIyBmdWxsIGltYWdlXG4gIGV4dG50X3IgPC0gZXh0ZW50KHIpXG4gIGV4dG50X3JbMV0gPC0gZXh0ZW50KHIpWzFdICsgKDIgKiAoMSAvIDMzNikpICMgeC1taW5cbiAgZXh0bnRfclsyXSA8LSBleHRlbnQocilbMl0gLSAoMSAqICgxIC8gMzM2KSkgIyB4LW1heFxuICBleHRudF9yWzNdIDwtIGV4dGVudChyKVszXSArICgxICogKDEgLyAzMzYpKSAgIyB5LW1pblxuICBleHRudF9yWzRdIDwtIGV4dGVudChyKVs0XSAtICgyICogKDEgLyAzMzYpKSAgIyB5LW1heFxuICByIDwtIGNyb3AociwgZXh0bnRfcilcbn1lbHNle1xuICBzdG9wKFwiSWYgeW91IGhhdmUgc3Vic2V0IHBhcnQgb2YgdGhlIGltYWdlLCBtYWtlIHN1cmUgdGhhdCB5b3VyIG5ldyBleHRlbnQgY29pbmNpZGVzIHdpdGggdGhlIDFrbSBwcm9kdWN0IGdyaWQuXG4gICAgICAgKHNlZSBodHRwOi8vcHJvYmEtdi52Z3Qudml0by5iZS9zaXRlcy9wcm9iYS12LnZndC52aXRvLmJlL2ZpbGVzL3Byb2R1Y3RzX3VzZXJfbWFudWFsLnBkZiwgcGcgMzApLiBcbiAgICAgICBJZiBpdCBkb2VzLCBnbyBhaGVhZCB3aXRoIHRoZSByZXNhbXBsaW5nLlwiKVxufVxuXG5gYGAifQ== -->
+<pre class="r"><code>if(extent(r)[1] &lt; -180 &amp; extent(r)[2] &gt; 179.997){  # full image
+  extnt_r &lt;- extent(r)
+  extnt_r[1] &lt;- extent(r)[1] + (2 * (1 / 336)) # x-min
+  extnt_r[2] &lt;- extent(r)[2] - (1 * (1 / 336)) # x-max
+  extnt_r[3] &lt;- extent(r)[3] + (1 * (1 / 336))  # y-min
+  extnt_r[4] &lt;- extent(r)[4] - (2 * (1 / 336))  # y-max
+  r &lt;- crop(r, extnt_r)
+}else{
+  stop(&quot;If you have subset part of the image, make sure that your new extent coincides with the 1km product grid.
+       (see http://proba-v.vgt.vito.be/sites/proba-v.vgt.vito.be/files/products_user_manual.pdf, pg 30). 
+       If it does, go ahead with the resampling.&quot;)
+}
+</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>If the user has subset part of the original 300m product, its new extention should match with the 1km product grid. Otherwise, the comparison or any other kind of calculations involving any of the 1km products cannot be made properly. The following vectors contain Long and Lat coordinates, respectively, of the 1km grid (edges of the cells):</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuXG54X2V4dCA8LSBzZXEoKC0xODAgLSAoKDEgLyAxMTIpIC8gMikpLCAxODAsICgzICogKDEgLyAzMzYpKSlcbnlfZXh0IDwtIHNlcSgoODAgKyAoKDEgLyAxMTIpIC8gMikpLCAtIDYwLCAtICgzICogKDEgLyAzMzYpKSlcblxuYGBgIn0= -->
+<pre class="r"><code>
+x_ext &lt;- seq((-180 - ((1 / 112) / 2)), 180, (3 * (1 / 336)))
+y_ext &lt;- seq((80 + ((1 / 112) / 2)), - 60, - (3 * (1 / 336)))
+</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>When these checks and coorections are made, the process of resampling itself can go ahead using <em>aggregate()</em>.</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucjMwMG1fcmVzYW1wbGVkMWttX0FnZ3IgPC0gYWdncmVnYXRlKHIsXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgZmFjdCA9IDMsICMgZnJvbSAzMzNtIHRvIDFrbSAgXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgZnVuID0gbWVhbiwgXG4gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgbmEucm0gPSBUUlVFLCBcbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBmaWxlbmFtZSA9ICcnKVxuXG5gYGAifQ== -->
+<pre class="r"><code>r300m_resampled1km_Aggr &lt;- aggregate(r,
+                                     fact = 3, # from 333m to 1km  
+                                     fun = mean, 
+                                     na.rm = TRUE, 
+                                     filename = &#39;&#39;)
+</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<p>Finally, a couple of plots in case the user wants to take a look at the resampled map.</p>
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucGxvdChyLCBtYWluID0gJ09yaWdpbmFsIG1hcCBhdCAzMDBtJylcbnBsb3QocjMwMG1fcmVzYW1wbGVkMWttX0FnZ3IsIG1haW4gPSAnUmVzYW1wbGVkIG1hcCB0byAxa20nKVxuYGBgIn0= -->
+<pre class="r"><code>plot(r, main = &#39;Original map at 300m&#39;)
+plot(r300m_resampled1km_Aggr, main = &#39;Resampled map to 1km&#39;)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
 <!-- rnb-text-end -->
 </div>
 <div class="footnotes">
@@ -1814,7 +1865,7 @@ r[r &gt; cuttoff_flag] &lt;- NA
 </ol>
 </div>
 
-<div id="rmd-source-code">LS0tCnRpdGxlOiAiUmVzYW1wbGUgVG9vbCBXaXRoIFIiCm91dHB1dDogaHRtbF9ub3RlYm9vawotLS0KCiMgUmVhZGluZyBpbiBhbmQgcHJlcGFyaW5nIGRhdGEgCgpXaGVuIHJ1bm5pbmcgdGhlIG5vdGVib29rcyBvbiBWSVRP4oCZcyBzZXJ2ZXJzLCB0aGUgdXNlciBjYW4gZm9sbG93IHRoZSBkaXJlY3Rpb25zIHNob3duIGluIApodHRwczovL25idmlld2VyLmp1cHl0ZXIub3JnL2dpdGh1Yi9WSVRPYmVsZ2l1bS9ub3RlYm9vay1zYW1wbGVzL3Jhdy9tYXN0ZXIvZGF0YXNldHMvcHJvYmF2L1JlYWRpbmclMjBQUk9CQS1WJTIwdXNpbmclMjBSLmlweW5iIHRvIGZpbmQgbG9jYXRpb25zIG9mIFBST0JBLVYgcHJvZHVjdHMuIERvaW5nIHNvLCB0aGUgZGF0YSBzZXQgKG5ldENERiBmaWxlcykgd2lsbCBiZSBsb2NhdGVkIGFuZCBhdmFpbGFibGUgaW4gdGhlIFZJVE8ncyBzZXJ2ZXJzLgoKQWx0ZXJuYXRpdmVseSwgd2hlbiB3b3JraW5nIGxvY2FsbHksIHRoZSBSLXVzZXIgY2FuIGNob29zZSB0byBhdXRvbWF0aWNhbGx5IGRvd25sb2FkIENvcGVybmljdXMgbGFuZCBkYXRhIChodHRwczovL2xhbmQuY29wZXJuaWN1cy5ldS9nbG9iYWwvKSB1c2luZyB0aGUgZnVuY3Rpb25zIGZvdW5kIGluIGh0dHBzOi8vZ2l0aHViLmNvbS9jZ2xzL0NvcGVybmljdXMtR2xvYmFsLUxhbmQtU2VydmljZS1EYXRhLURvd25sb2FkLXdpdGgtUi4gCgpPbmNlIHRoZSBkYXRhIHNldCBpcyBhdmFpbGFibGUsICpyYXN0ZXIqIHBhY2thZ2UgZnVuY3Rpb25hbGl0eSBpcyB1c2VkIHRvIHByZXBhcmUgaXQgZm9yIHJlc2FtcGxpbmcuIAoKYGBge3J9CmxpYnJhcnkocmFzdGVyKQoKIyBuZHZpX2ZpbGVzIGlzIGEgbGlzdCBvZiB0aGUgYXZhaWxhYmxlIGZpbGVzIChuZXRDRkQpCiMgcjMwMG0gPC0gc3Vic3RyaW5nKG5kdmlfZmlsZXNbMV0sNikgICMgbmR2aTMwMG0gaXMgdGhlIGZpbGVuYW1lIG9mIHRoZSBvYmplY3QgdG8gYmUgcHJvY2Vzc2VkCnIgPC0gcmFzdGVyKHIzMDBtKQoKYGBgCgoKVGhlIG9yaWdpbmFsIG5ldENERiBmaWxlIG1pZ2h0IGNvbnRhaW4gZmxhZ2dlZCBkYXRhIGNvcnJlc3BvbmRpbmcgdG8gTm9EYXRhIChOQSksIGV0Yywgd2hpY2ggbmVlZHMgdG8gYmUgZGVhbHQgd2l0aC4gSW4gY2FzZSBvZiB0aGUgTkRWSSBwcm9kdWN0cyBhbmQgbmV0Q0RGIGZpbGVzLCBhc3NpZ25lZCB2YWx1ZXMgPiAyNTAgYXJlIGZsYWdnZWQgYW5kIG5lZWQgdG8gYmUgY29udmVydGVkIGludG8gTkEuIFdoZW4gbmV0Q0RGIGZpbGVzIGFyZSByZWFkIGluIGFzIGEgKlJhc3RlcipcKiBvYmplY3QgYW5kIHZhbHVlcyB0cmFuc2Zvcm1lZCBpbnRvIHJlYWwgTkRWSSB2YWx1ZXMsIHRoZSBjdXR0b2ZmIGZvciBmbGFnZ2VkIGNlbGxzIGlzIDAuOTIuIFRoZXJlZm9yZSwgYWxsIGNlbGxzID4gMC45MiBoYXZlIHRvIGJlIHNldCB0byBOQS4KCmBgYHtyfQoKaWYoZ3JlcGwoIm5kdmkiLCBuZHZpX2ZpbGVzWzFdLCBpZ25vcmUuY2FzZSA9IFRSVUUpKXsKICBjdXR0b2ZmX2ZsYWcgPC0gMC45Mgp9ZWxzZXsKICBzdG9wKCJQbGVhc2UgZGVmaW5lICdjdXR0b2ZmX2ZsYWcnIChjdXR0b2ZmIHZhbHVlIGZvciBmbGFnZ2VkIGNlbGxzKSBmb3IgdGhlIFJhc3Rlciogb2JqZWN0IikKfQoKcltyID4gY3V0dG9mZl9mbGFnXSA8LSBOQQoKYGBgCgoKCiMgUmVzYW1wbGluZyB1c2luZyB0aGUgYWdncmVnYXRpb24gYXBwcm9hY2gKClRoZXJlIGFyZSBzZXZlcmFsIGFwcHJvYWNoZXMgdG8gcmVzYW1wbGUgZGF0YSB0byBhIGNvYXJzZXIgcmVzb2x1dGlvbi4gVGhlIGFyZWEtYmFzZWQgYWdncmVnYXRpb24gbWV0aG9kcyBhcmUgYmFzZWQgaW4gZ3JvdXBpbmcgcmVjdGFuZ3VsYXIgYXJlYXMgb2YgY2VsbHMgb2YgdGhlIGZpbmVyIHJlc29sdXRpb24gaW1hZ2UgdG8gY3JlYXRlIGEgbmV3IG1hcCB3aXRoIGxhcmdlciBjZWxscy4gVG8gZG8gdGhhdCwgdGhlIGZ1bmN0aW9uICphZ2dyZWdhdGUoKSogb2YgdGhlIHBhY2thZ2UgKnJhc3RlciogbmVlZHMgdG8ga25vdyB0aGUgZmFjdG9yIG9mIGFnZ3JlZ2F0aW9uLiBJbiB0aGlzIGNhc2UsIHRoZSBmYWN0b3IgaXMgMyBhcyBpdCBuZWVkcyB0byBnbyBmcm9tIDMzM20gdG8gMWttLiBJbiBhZGRpdGlvbiwgKmFnZ3JlZ2F0ZSgpKiBjYW4gcGVyZm9ybSB0aGUgY2FsY3VsYXRpb24gdXNpbmcgZGlmZmVyZW50IGZ1bmN0aW9ucy4gV2hpbGUgdGhlIGRlZmF1bHQgaXMgdGhlIGF2ZXJhZ2UgKCptZWFuKCkqKSBpdCBjYW4gd29yayBhbHNvIHdpdGggKm1vZGFsKCkqLCAqbWF4KCkqIG9yICptaW4oKSouCgpBcyBmb3IgdGhlIHBpeGVsIGNvb3JkaW5hdGUgZGVmaW5pdGlvbiBmb3IgYm90aCB0aGUgMzAwbSBhbmQgdGhlIDFrbSBwcm9kdWN0cywgbm8gcHJvcGVyIGFnZ3JlZ2F0aW9uIG9mCnRoZSBmaW5lciByZXNvbHV0aW9uIHByb2R1Y3QgY2FuIGJlIHBlcmZvcm1lZCBhdCB0aGUgbWluaW11bSBhbmQgbWF4aW11bSBsYXRpdHVkZSBhbmQgbG9uZ2l0dWRlW14xXQoKCgoKCgoKCgoKCgpbXjFdOiBFcndpbiBXb2x0ZXJzLCBXb3V0ZXIgRGllcmNreCwgTWFyaWFuLURhbmllbCBJb3JkYWNoZSwgYW5kIEVsc2UgU3dpbm5lbi4gKDE2LzAzLzIwMTgpIFBST0JBLVYgUHJvZHVjdHMgVXNlciBNYW51YWwgdjMuMDEuIGh0dHA6Ly9wcm9iYS12LnZndC52aXRvLmJlL3NpdGVzL3Byb2JhLXYudmd0LnZpdG8uYmUvZmlsZXMvcHJvZHVjdHNfdXNlcl9tYW51YWwucGRmCg==</div>
+<div id="rmd-source-code">LS0tCnRpdGxlOiAiUmVzYW1wbGUgVG9vbCBXaXRoIFIiCm91dHB1dDogaHRtbF9ub3RlYm9vawotLS0KCiMgUmVhZGluZyBpbiBhbmQgcHJlcGFyaW5nIGRhdGEgCgpXaGVuIHJ1bm5pbmcgdGhlIG5vdGVib29rcyBvbiBWSVRP4oCZcyBzZXJ2ZXJzLCB0aGUgdXNlciBjYW4gZm9sbG93IHRoZSBkaXJlY3Rpb25zIHNob3duIGluIApodHRwczovL25idmlld2VyLmp1cHl0ZXIub3JnL2dpdGh1Yi9WSVRPYmVsZ2l1bS9ub3RlYm9vay1zYW1wbGVzL3Jhdy9tYXN0ZXIvZGF0YXNldHMvcHJvYmF2L1JlYWRpbmclMjBQUk9CQS1WJTIwdXNpbmclMjBSLmlweW5iIHRvIGZpbmQgbG9jYXRpb25zIG9mIFBST0JBLVYgcHJvZHVjdHMuIERvaW5nIHNvLCB0aGUgZGF0YSBzZXQgKG5ldENERiBmaWxlcykgd2lsbCBiZSBsb2NhdGVkIGFuZCBhdmFpbGFibGUgaW4gdGhlIFZJVE8ncyBzZXJ2ZXJzLgoKQWx0ZXJuYXRpdmVseSwgd2hlbiB3b3JraW5nIGxvY2FsbHksIHRoZSBSLXVzZXIgY2FuIGNob29zZSB0byBhdXRvbWF0aWNhbGx5IGRvd25sb2FkIENvcGVybmljdXMgbGFuZCBkYXRhIChodHRwczovL2xhbmQuY29wZXJuaWN1cy5ldS9nbG9iYWwvKSB1c2luZyB0aGUgZnVuY3Rpb25zIGZvdW5kIGluIGh0dHBzOi8vZ2l0aHViLmNvbS9jZ2xzL0NvcGVybmljdXMtR2xvYmFsLUxhbmQtU2VydmljZS1EYXRhLURvd25sb2FkLXdpdGgtUi4gCgpPbmNlIHRoZSBkYXRhIHNldCBpcyBhdmFpbGFibGUsICpyYXN0ZXIqIHBhY2thZ2UgZnVuY3Rpb25hbGl0eSBpcyB1c2VkIHRvIHByZXBhcmUgaXQgZm9yIHJlc2FtcGxpbmcuIAoKYGBge3J9CmxpYnJhcnkocmFzdGVyKQoKIyBuZHZpX2ZpbGVzIGlzIGEgbGlzdCBvZiB0aGUgYXZhaWxhYmxlIGZpbGVzIChuZXRDRkQgb3IgUmFzdGVyKiBvYmplY3RzKQpuZHZpX2ZpbGVzIDwtIGxpc3QocGFzdGUwKCIvVXNlcnMveGF2aV9ycC9Eb2N1bWVudHMvRDZfTFBEL05EVklfcmVzYW1wbGUiLCAiL25kdmkzMDBtX0NhdC50aWYiKSkKciA8LSByYXN0ZXIobmR2aV9maWxlc1sxXSkKCmBgYAoKClRoZSBvcmlnaW5hbCBuZXRDREYgZmlsZSBtaWdodCBjb250YWluIGZsYWdnZWQgZGF0YSBjb3JyZXNwb25kaW5nIHRvIE5vRGF0YSAoTkEpLCBldGMsIHdoaWNoIG5lZWRzIHRvIGJlIGRlYWx0IHdpdGguIEluIGNhc2Ugb2YgdGhlIE5EVkkgcHJvZHVjdHMgYW5kIG5ldENERiBmaWxlcywgYXNzaWduZWQgdmFsdWVzID4gMjUwIGFyZSBmbGFnZ2VkIGFuZCBuZWVkIHRvIGJlIGNvbnZlcnRlZCBpbnRvIE5BLiBXaGVuIG5ldENERiBmaWxlcyBhcmUgcmVhZCBpbiBhcyBhICpSYXN0ZXIqXCogb2JqZWN0IGFuZCB2YWx1ZXMgdHJhbnNmb3JtZWQgaW50byByZWFsIE5EVkkgdmFsdWVzLCB0aGUgY3V0dG9mZiBmb3IgZmxhZ2dlZCBjZWxscyBpcyAwLjkyLiBUaGVyZWZvcmUsIGFsbCBjZWxscyA+IDAuOTIgaGF2ZSB0byBiZSBzZXQgdG8gTkEuCgoKCmBgYHtyfQppZihncmVwbCgibmR2aSIsIG5kdmlfZmlsZXNbMV0sIGlnbm9yZS5jYXNlID0gVFJVRSkpewogIGN1dHRvZmZfZmxhZyA8LSAwLjkyCn1lbHNlewogIHN0b3AoIlBsZWFzZSBkZWZpbmUgJ2N1dHRvZmZfZmxhZycgKGN1dHRvZmYgdmFsdWUgZm9yIGZsYWdnZWQgY2VsbHMpIGZvciB0aGUgUmFzdGVyKiBvYmplY3QiKQp9CgpyW3IgPiBjdXR0b2ZmX2ZsYWddIDwtIE5BCgpgYGAKCgoKIyBSZXNhbXBsaW5nIHVzaW5nIHRoZSBhZ2dyZWdhdGlvbiBhcHByb2FjaAoKVGhlcmUgYXJlIHNldmVyYWwgYXBwcm9hY2hlcyB0byByZXNhbXBsZSBkYXRhIHRvIGEgY29hcnNlciByZXNvbHV0aW9uLiBUaGUgYXJlYS1iYXNlZCBhZ2dyZWdhdGlvbiBtZXRob2RzIGFyZSBiYXNlZCBpbiBncm91cGluZyByZWN0YW5ndWxhciBhcmVhcyBvZiBjZWxscyBvZiB0aGUgZmluZXIgcmVzb2x1dGlvbiBpbWFnZSB0byBjcmVhdGUgYSBuZXcgbWFwIHdpdGggbGFyZ2VyIGNlbGxzLiBUbyBkbyB0aGF0LCB0aGUgZnVuY3Rpb24gKmFnZ3JlZ2F0ZSgpKiBvZiB0aGUgcGFja2FnZSAqcmFzdGVyKiBuZWVkcyB0byBrbm93IHRoZSBmYWN0b3Igb2YgYWdncmVnYXRpb24uIEluIHRoaXMgY2FzZSwgdGhlIGZhY3RvciBpcyAzIGFzIGl0IG5lZWRzIHRvIGdvIGZyb20gMzMzbSB0byAxa20uIEluIGFkZGl0aW9uLCAqYWdncmVnYXRlKCkqIGNhbiBwZXJmb3JtIHRoZSBjYWxjdWxhdGlvbiB1c2luZyBkaWZmZXJlbnQgZnVuY3Rpb25zLiBXaGlsZSB0aGUgZGVmYXVsdCBpcyB0aGUgYXZlcmFnZSAoKm1lYW4oKSopIGl0IGNhbiB3b3JrIGFsc28gd2l0aCAqbW9kYWwoKSosICptYXgoKSogb3IgKm1pbigpKi4KCkFzIGZvciB0aGUgcGl4ZWwgY29vcmRpbmF0ZSBkZWZpbml0aW9uIGZvciBib3RoIHRoZSAzMDBtIGFuZCB0aGUgMWttIHByb2R1Y3RzLCBubyBwcm9wZXIgYWdncmVnYXRpb24gb2YKdGhlIGZpbmVyIHJlc29sdXRpb24gcHJvZHVjdCBjYW4gYmUgcGVyZm9ybWVkIGF0IHRoZSBtaW5pbXVtIGFuZCBtYXhpbXVtIGxhdGl0dWRlIGFuZCBsb25naXR1ZGVbXjFdLiBGb3IgdGhpcyByZWFzb24sIHRoZSAqUmFzdGVyTGF5ZXIqIG9iamVjdCBuZWVkcyB0byBiZSAnY3JvcHBlZCcgYWNjb3JkaW5nbHkuCgoKW14xXTogRXJ3aW4gV29sdGVycywgV291dGVyIERpZXJja3gsIE1hcmlhbi1EYW5pZWwgSW9yZGFjaGUsIGFuZCBFbHNlIFN3aW5uZW4uICgxNi8wMy8yMDE4KSBQUk9CQS1WIFByb2R1Y3RzIFVzZXIgTWFudWFsIHYzLjAxLiBodHRwOi8vcHJvYmEtdi52Z3Qudml0by5iZS9zaXRlcy9wcm9iYS12LnZndC52aXRvLmJlL2ZpbGVzL3Byb2R1Y3RzX3VzZXJfbWFudWFsLnBkZgoKCmBgYHtyfQppZihleHRlbnQocilbMV0gPCAtMTgwICYgZXh0ZW50KHIpWzJdID4gMTc5Ljk5Nyl7ICAjIGZ1bGwgaW1hZ2UKICBleHRudF9yIDwtIGV4dGVudChyKQogIGV4dG50X3JbMV0gPC0gZXh0ZW50KHIpWzFdICsgKDIgKiAoMSAvIDMzNikpICMgeC1taW4KICBleHRudF9yWzJdIDwtIGV4dGVudChyKVsyXSAtICgxICogKDEgLyAzMzYpKSAjIHgtbWF4CiAgZXh0bnRfclszXSA8LSBleHRlbnQocilbM10gKyAoMSAqICgxIC8gMzM2KSkgICMgeS1taW4KICBleHRudF9yWzRdIDwtIGV4dGVudChyKVs0XSAtICgyICogKDEgLyAzMzYpKSAgIyB5LW1heAogIHIgPC0gY3JvcChyLCBleHRudF9yKQp9ZWxzZXsKICBzdG9wKCJJZiB5b3UgaGF2ZSBzdWJzZXQgcGFydCBvZiB0aGUgaW1hZ2UsIG1ha2Ugc3VyZSB0aGF0IHlvdXIgbmV3IGV4dGVudCBjb2luY2lkZXMgd2l0aCB0aGUgMWttIHByb2R1Y3QgZ3JpZC4KICAgICAgIChzZWUgaHR0cDovL3Byb2JhLXYudmd0LnZpdG8uYmUvc2l0ZXMvcHJvYmEtdi52Z3Qudml0by5iZS9maWxlcy9wcm9kdWN0c191c2VyX21hbnVhbC5wZGYsIHBnIDMwKS4gCiAgICAgICBJZiBpdCBkb2VzLCBnbyBhaGVhZCB3aXRoIHRoZSByZXNhbXBsaW5nLiIpCn0KCmBgYAoKCklmIHRoZSB1c2VyIGhhcyBzdWJzZXQgcGFydCBvZiB0aGUgb3JpZ2luYWwgMzAwbSBwcm9kdWN0LCBpdHMgbmV3IGV4dGVudGlvbiBzaG91bGQgbWF0Y2ggd2l0aCB0aGUgMWttIHByb2R1Y3QgZ3JpZC4gT3RoZXJ3aXNlLCB0aGUgY29tcGFyaXNvbiBvciBhbnkgb3RoZXIga2luZCBvZiBjYWxjdWxhdGlvbnMgaW52b2x2aW5nIGFueSBvZiB0aGUgMWttIHByb2R1Y3RzIGNhbm5vdCBiZSBtYWRlIHByb3Blcmx5LiBUaGUgZm9sbG93aW5nIHZlY3RvcnMgY29udGFpbiBMb25nIGFuZCBMYXQgY29vcmRpbmF0ZXMsIHJlc3BlY3RpdmVseSwgb2YgdGhlIDFrbSBncmlkIChlZGdlcyBvZiB0aGUgY2VsbHMpOgoKYGBge3J9Cgp4X2V4dCA8LSBzZXEoKC0xODAgLSAoKDEgLyAxMTIpIC8gMikpLCAxODAsICgzICogKDEgLyAzMzYpKSkKeV9leHQgPC0gc2VxKCg4MCArICgoMSAvIDExMikgLyAyKSksIC0gNjAsIC0gKDMgKiAoMSAvIDMzNikpKQoKYGBgCgoKCldoZW4gdGhlc2UgY2hlY2tzIGFuZCBjb29yZWN0aW9ucyBhcmUgbWFkZSwgdGhlIHByb2Nlc3Mgb2YgcmVzYW1wbGluZyBpdHNlbGYgY2FuIGdvIGFoZWFkIHVzaW5nICphZ2dyZWdhdGUoKSouCgpgYGB7cn0KcjMwMG1fcmVzYW1wbGVkMWttX0FnZ3IgPC0gYWdncmVnYXRlKHIsCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBmYWN0ID0gMywgIyBmcm9tIDMzM20gdG8gMWttICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIGZ1biA9IG1lYW4sIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgbmEucm0gPSBUUlVFLCAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIGZpbGVuYW1lID0gJycpCgpgYGAKCgoKRmluYWxseSwgYSBjb3VwbGUgb2YgcGxvdHMgaW4gY2FzZSB0aGUgdXNlciB3YW50cyB0byB0YWtlIGEgbG9vayBhdCB0aGUgcmVzYW1wbGVkIG1hcC4KCmBgYHtyfQpwbG90KHIsIG1haW4gPSAnT3JpZ2luYWwgbWFwIGF0IDMwMG0nKQpwbG90KHIzMDBtX3Jlc2FtcGxlZDFrbV9BZ2dyLCBtYWluID0gJ1Jlc2FtcGxlZCBtYXAgdG8gMWttJykKYGBgCgoK</div>
 
 
 
