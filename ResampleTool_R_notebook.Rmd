@@ -50,23 +50,20 @@ kable(cutoff_method_df[, 1:6], caption = "")
 
 cutoff_method_df_ndvi_to <- cutoff_method_df[cutoff_method_df$Data.layer.in.file == "NDVI", c(4, 6)]
 ```
-```{r}
-
-```
 
 
-In case of the NDVI products and netCDF files, assigned values > `r as.character(cutoff_method_df_ndvi_to[1])` are flagged and need to be converted into NA. When netCDF files are read in as a *Raster*\* object and values transformed into real NDVI values, the cuttoff for flagged cells is `r as.character(cutoff_method_df_ndvi_to[2])`. Therefore, all cells > `r as.character(cutoff_method_df_ndvi_to[2])` have to be set to NA.
+In case of the NDVI products and netCDF files, assigned values > `r as.character(cutoff_method_df_ndvi_to[1])` are flagged and need to be converted into NA. When netCDF files are read in as a *Raster*\* object and values transformed into real NDVI values, the cutoff for flagged cells is `r as.character(cutoff_method_df_ndvi_to[2])`. Therefore, all cells > `r as.character(cutoff_method_df_ndvi_to[2])` have to be set to NA.
 
 
 
 ```{r}
 if(grepl("ndvi", ndvi_files[[1]], ignore.case = TRUE)){
-  cuttoff_flag <- as.numeric(cutoff_method_df_ndvi_to[2])
+  cutoff_flag <- as.numeric(cutoff_method_df_ndvi_to[2])
 }else{
-  stop("Please define 'cuttoff_flag' (cuttoff value for flagged cells) for the Raster* object")
+  print("Please define 'cutoff_flag' (cutoff value for flagged cells) for the Raster* object")
 }
 
-r[r > cuttoff_flag] <- NA
+r[r > cutoff_flag] <- NA
 
 ```
 
@@ -74,7 +71,15 @@ r[r > cuttoff_flag] <- NA
 
 # Resampling using the aggregation approach
 
-There are several approaches to resample data to a coarser resolution. The area-based aggregation methods are based in grouping rectangular areas of cells of the finer resolution image to create a new map with larger cells. To do that, the function *aggregate()* of the package *raster* needs to know the factor of aggregation. In this case, the factor is 3 as it needs to go from 333m to 1km. In addition, *aggregate()* can perform the calculation using different functions. While the default is the average (*mean()*) it can work also with *modal()*, *max()* or *min()*.
+There are several approaches to resample data to a coarser resolution. The area-based aggregation methods are based in grouping rectangular areas of cells of the finer resolution image to create a new map with larger cells. To do that, the function *aggregate()* of the package *raster* needs to know the factor of aggregation. In this case, the factor is 3 as it needs to go from 333m to 1km. In addition, *aggregate()* can perform the calculation using different functions. While the default is the average (*mean()*) it can work also with *modal()*, *max()* or *min()*. The following table recommends the best suited method for each product/layer.
+
+```{r echo = FALSE}
+kable(cutoff_method_df[, c(1:2, 7)], caption = "")
+
+cutoff_method_df_ndvi_method <- cutoff_method_df[cutoff_method_df$Data.layer.in.file == "NDVI", 7]
+
+```
+
 
 As for the pixel coordinate definition for both the 300m and the 1km products, no proper aggregation of the finer resolution product can be performed at the minimum and maximum latitude and longitude (see image below). For this reason, the *RasterLayer* object needs to be 'cropped' accordingly.
 
@@ -83,7 +88,8 @@ As for the pixel coordinate definition for both the 300m and the 1km products, n
 
 
 ```{r}
-if(extent(r)[1] < -180 & extent(r)[2] > 179.997){  # full image
+if(extent(r)[1] < -180 & extent(r)[2] > 179.997 &
+   extent(r)[3] < -59.99554 & extent(r)[4] > 80){  # full image
   extnt_r <- extent(r)
   extnt_r[1] <- extent(r)[1] + (2 * (1 / 336)) # x-min
   extnt_r[2] <- extent(r)[2] - (1 * (1 / 336)) # x-max
@@ -91,21 +97,38 @@ if(extent(r)[1] < -180 & extent(r)[2] > 179.997){  # full image
   extnt_r[4] <- extent(r)[4] - (2 * (1 / 336))  # y-max
   r <- crop(r, extnt_r)
 }else{
-
+  print("The image is not the full product; therefore extent needs to be checked")
 }
-
 ```
 
 
-If the user has subset part of the original 300m product, its new extention should match with the 1km product grid. Otherwise, the comparison or any other kind of calculations involving any of the 1km products cannot be made properly. The following vectors contain Long and Lat coordinates, respectively, of the 1km grid (edges of the cells):
+If the user has subset part of the original 300m product, its new extent should match with the 1km product grid. Otherwise, the comparison or any other kind of calculations involving any of the 1km products cannot be made properly. So, on the one hand, if the user provides a 1km *Raster*\* object, the 300m product to be resampled will be geographically subset accordingly. On the other hand, if no 1km object is provided, the 300m product will be subset so that its extent matches with the closer grid coordinates (Lat/Long) of the 1km products.
 
-```{r}
 
+```{r echo = TRUE}
+#The following vectors contain Long and Lat coordinates, respectively, of the #1km grid (edges of the cells):
 x_ext <- seq((-180 - ((1 / 112) / 2)), 180, (3 * (1 / 336)))
 y_ext <- seq((80 + ((1 / 112) / 2)), - 60, - (3 * (1 / 336)))
-
 ```
 
+```{r}
+ndvi_files_1km <- list(paste0("/Users/xavi_rp/Documents/D6_LPD/NDVI_resample", "/ndvi1km_Cat.tif"))
+r_1km <- raster(ndvi_files_1km[[1]])
+
+if(exists("r_1km") & all(round(res(r_1km), 8) == 0.00892857) &
+   extent(r_1km)[1] %in% x_ext & extent(r_1km)[2] %in% x_ext &
+   extent(r_1km)[3] %in% y_ext & extent(r_1km)[4] %in% y_ext){ # r_1km matches with PROBA-V 1km products
+  
+  r <- crop(r, r_1km)
+  
+}else if(){      # r_1km exists but does not match with PROBA-V 1km products
+  
+  
+}else{           # r_1km not provided
+  
+  
+}
+```
 
 
 When these checks and coorections are made, the process of resampling itself can go ahead using *aggregate()*.
