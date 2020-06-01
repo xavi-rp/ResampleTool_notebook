@@ -19,7 +19,7 @@ library(knitr)
 
 
 # ndvi_files is a list of the available files (netCFD or Raster* objects)
-ndvi_files <- list(paste0("/Users/xavi_rp/Documents/D6_LPD/NDVI_resample", "/ndvi300m_Cat.tif"))
+ndvi_files <- list(paste0("/Users/xavi_rp/Documents/D6_LPD/NDVI_resample", "/ndvi300m_Cat_kk.tif"))
 r <- raster(ndvi_files[[1]])
 
 ```
@@ -81,7 +81,7 @@ cutoff_method_df_ndvi_method <- cutoff_method_df[cutoff_method_df$Data.layer.in.
 ```
 
 
-As for the pixel coordinate definition for both the 300m and the 1km products, no proper aggregation of the finer resolution product can be performed at the minimum and maximum latitude and longitude (see image below). For this reason, the *RasterLayer* object needs to be 'cropped' accordingly.
+As for the pixel coordinate definition for both the 300m and the 1km products, no proper aggregation of the finer resolution product can be performed at the minimum and maximum latitude and longitude (see image below). For this reason, the 300m *RasterLayer* object needs to be adjusted accordingly.
 
 ![](Pixel_centre_example_CGLS.png)
 
@@ -89,7 +89,7 @@ As for the pixel coordinate definition for both the 300m and the 1km products, n
 
 ```{r}
 if(extent(r)[1] < -180 & extent(r)[2] > 179.997 &
-   extent(r)[3] < -59.99554 & extent(r)[4] > 80){  # full image
+   extent(r)[3] < -59.99554 & extent(r)[4] > 80){  # checking for full product (image)
   extnt_r <- extent(r)
   extnt_r[1] <- extent(r)[1] + (2 * (1 / 336)) # x-min
   extnt_r[2] <- extent(r)[2] - (1 * (1 / 336)) # x-max
@@ -97,37 +97,97 @@ if(extent(r)[1] < -180 & extent(r)[2] > 179.997 &
   extnt_r[4] <- extent(r)[4] - (2 * (1 / 336))  # y-max
   r <- crop(r, extnt_r)
 }else{
-  print("The image is not the full product; therefore extent needs to be checked")
+  print("The image is not the full product; therefore, extent needs to be checked")
 }
 ```
 
 
-If the user has subset part of the original 300m product, its new extent should match with the 1km product grid. Otherwise, the comparison or any other kind of calculations involving any of the 1km products cannot be made properly. So, on the one hand, if the user provides a 1km *Raster*\* object, the 300m product to be resampled will be geographically subset accordingly. On the other hand, if no 1km object is provided, the 300m product will be subset so that its extent matches with the closer grid coordinates (Lat/Long) of the 1km products.
+If the user wants to use a subset of the original 300m product, its new extent should match with the 1km product grid. Otherwise, the comparison or any other kind of calculations involving any of the 1km PROVA-B products cannot be made properly. 
 
-
-```{r echo = TRUE}
-#The following vectors contain Long and Lat coordinates, respectively, of the #1km grid (edges of the cells):
-x_ext <- seq((-180 - ((1 / 112) / 2)), 180, (3 * (1 / 336)))
-y_ext <- seq((80 + ((1 / 112) / 2)), - 60, - (3 * (1 / 336)))
-```
+So, at this point, the user has two alternative options. On the one hand, the user can provide a 1km *Raster*\* object based on a subset of any PROVA-B product at 1km resolution. 
 
 ```{r}
 ndvi_files_1km <- list(paste0("/Users/xavi_rp/Documents/D6_LPD/NDVI_resample", "/ndvi1km_Cat.tif"))
 r_1km <- raster(ndvi_files_1km[[1]])
+```
 
-if(exists("r_1km") & all(round(res(r_1km), 8) == 0.00892857) &
-   extent(r_1km)[1] %in% x_ext & extent(r_1km)[2] %in% x_ext &
-   extent(r_1km)[3] %in% y_ext & extent(r_1km)[4] %in% y_ext){ # r_1km matches with PROBA-V 1km products
+
+Alternatively, if no 1km object is provided, a vector with coordinates can be used for subsetting the 300m product. 
+
+```{r}
+coords4subset <- c(0, 4, 40, 43) # a vector with Long/Lat decimal degrees in the form c(Xmin, Xmax, Ymin, Ymax)
+```
+
+
+Notice that with both options the extent provided might experience slight changes given that the new extent of the 300m product has to match exactly with the grid coordinates of the 1km products.
+
+Then, the 300m product to be resampled can be geographically subset accordingly to the chosen option and the final extent adjusted if necessary.
+
+
+```{r echo = TRUE}
+#The following vectors contain Long and Lat coordinates, respectively, of the #1km grid (edges of the cells):
+x_ext <- seq((-180 - ((1 / 112) / 2)), 180, (1/112))
+y_ext <- seq((80 + ((1 / 112) / 2)), - 60, - (1/112))
+```
+
+```{r}
+if(exists("r_1km") & all(round(res(r_1km), 7) == round(0.00892857, 7)) &
+   round(extent(r_1km)[1], 7) %in% round(x_ext, 7) & 
+   round(extent(r_1km)[2], 7) %in% round(x_ext, 7) &
+   round(extent(r_1km)[3], 7) %in% round(y_ext, 7) &
+   round(extent(r_1km)[4], 7) %in% round(y_ext, 7)){ # r_1km matches with PROBA-V 1km products
   
   r <- crop(r, r_1km)
   
-}else if(){      # r_1km exists but does not match with PROBA-V 1km products
+}else if(exists("r_1km") & all(round(res(r_1km), 7) == round(0.00892857, 7)) &
+   !all(round(extent(r_1km)[1], 7) %in% round(x_ext, 7) & 
+   round(extent(r_1km)[2], 7) %in% round(x_ext, 7) &
+   round(extent(r_1km)[3], 7) %in% round(y_ext, 7) &
+   round(extent(r_1km)[4], 7) %in% round(y_ext, 7))){  # r_1km exists but does not match with PROBA-V 1km products
+  stop("Please provide a 1km object adjusted to 1km PROBA-V products")
+
+}else if (!exists("r_1km") & exists("coords4subset") &
+          length(coords4subset) == 4 &
+          all(coords4subset >= -180) &
+          all(coords4subset <= 180)){  # r_1km not provided, but coordinates to subset from
   
+  coords4subset <- extent(coords4subset)
+  r <- crop(r, coords4subset)
   
-}else{           # r_1km not provided
-  
-  
+}else{
+  stop("Please provide either a 1km PROBA-V product or a set of coordinates to cut from")
 }
+
+
+## Adjustng extent
+extnt <- extent(r)
+  
+repeat{# adjusting columns (Lon) at left
+  if (round(extnt[1], 7) %in% round(x_ext, 7)) break
+  cat("\r", "Please note that 300m object X-min does not overlap 1km object X-min. Keep it in mind for further analysis")
+  extnt[1] <- extnt[1] + (1/336)
+}
+
+repeat{ # adjusting columns (Lon) at right
+  if(round(extnt[2], 7) %in% round(x_ext, 7)) break
+  cat("\r", "Please note that 300m object X-max does not overlap 1km object X-max. Keep it in mind for further analysis")
+  extnt[2] <- extnt[2] - (1/336)
+}
+
+repeat{# adjusting rows (Lat) at top
+  if (round(extnt[4], 7) %in% round(y_ext, 7)) break
+  cat("\r", "Please note that 300m object Y-max does not overlap 1km object Y-max. Keep it in mind for further analysis")
+  extnt[4] <- extnt[4] - (1/336)
+}
+
+repeat{ # adjusting rows (Lat) at bottom
+  if(round(extnt[3], 7) %in% round(y_ext, 7)) break
+  cat("\r", "Please note that 300m object Y-min does not overlap 1km object Y-min. Keep it in mind for further analysis")
+  extnt[3] <- extnt[3] + (1/336)
+}
+
+r <- crop(r, extnt)
+
 ```
 
 
