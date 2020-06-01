@@ -34,37 +34,32 @@ cutoff_method_df <- read.csv("Table_cutoff_and_resampleMethod.csv",
 cutoff_method_df <- as.data.frame(gsub("(\\[|\\])", "", as.matrix(cutoff_method_df)))
 cutoff_method_df <- as.data.frame(gsub("(\\.\\.\\.)", "_", as.matrix(cutoff_method_df)))
 
-cutoff_method_df$Valid.range.DN.from <- unlist(lapply(cutoff_method_df$Valid.range.DN, function(x) unlist(strsplit(as.character(x), "_"))[[1]]))
-cutoff_method_df$Valid.range.DN.to <- unlist(lapply(cutoff_method_df$Valid.range.DN, function(x) unlist(strsplit(as.character(x), "_"))[[2]]))
+cutoff_method_df$Valid.range.DN.min <- unlist(lapply(cutoff_method_df$Valid.range.DN, function(x) unlist(strsplit(as.character(x), "_"))[[1]]))
+cutoff_method_df$Valid.range.DN.max <- unlist(lapply(cutoff_method_df$Valid.range.DN, function(x) unlist(strsplit(as.character(x), "_"))[[2]]))
 
-cutoff_method_df$Valid.range.physical.from <- unlist(lapply(cutoff_method_df$Valid.range.physical, function(x) unlist(strsplit(as.character(x), "_"))[[1]]))
-cutoff_method_df$Valid.range.physical.to <- unlist(lapply(cutoff_method_df$Valid.range.physical, function(x) unlist(strsplit(as.character(x), "_"))[[2]]))
+cutoff_method_df$Valid.range.physical.min <- unlist(lapply(cutoff_method_df$Valid.range.physical, function(x) unlist(strsplit(as.character(x), "_"))[[1]]))
+cutoff_method_df$Valid.range.physical.max <- unlist(lapply(cutoff_method_df$Valid.range.physical, function(x) unlist(strsplit(as.character(x), "_"))[[2]]))
 
 cutoff_method_df <- cutoff_method_df[, c("Product","Data.layer.in.file",
-                                         "Valid.range.DN.from", "Valid.range.DN.to",
-                                         "Valid.range.physical.from", "Valid.range.physical.to",
+                                         "Valid.range.DN.min", "Valid.range.DN.max",
+                                         "Valid.range.physical.min", "Valid.range.physical.max",
                                          "Resample.method", "Additional.cutoff")]
 
 #print(cutoff_method_df)
 kable(cutoff_method_df[, 1:6], caption = "")
 
-cutoff_method_df_ndvi_to <- cutoff_method_df[cutoff_method_df$Data.layer.in.file == "NDVI", c(4, 6)]
+cutoff_method_df_ndvi_max <- cutoff_method_df[cutoff_method_df$Data.layer.in.file == "NDVI", c(4, 6)]
 ```
 
 
-In case of the NDVI products and netCDF files, assigned values > `r as.character(cutoff_method_df_ndvi_to[1])` are flagged and need to be converted into NA. When netCDF files are read in as a *Raster*\* object and values transformed into real NDVI values, the cutoff for flagged cells is `r as.character(cutoff_method_df_ndvi_to[2])`. Therefore, all cells > `r as.character(cutoff_method_df_ndvi_to[2])` have to be set to NA.
+For instance, in case of the NDVI products and netCDF files, assigned values > `r as.character(cutoff_method_df_ndvi_max[1])` are flagged and need to be converted into NA. When netCDF files are read in as a *Raster*\* object and values transformed into real NDVI values, the cutoff for flagged cells is `r as.character(cutoff_method_df_ndvi_max[2])`. Therefore, all cells > `r as.character(cutoff_method_df_ndvi_max[2])` have to be set to NA.
 
 
 
 ```{r}
-if(grepl("ndvi", ndvi_files[[1]], ignore.case = TRUE)){
-  cutoff_flag <- as.numeric(cutoff_method_df_ndvi_to[2])
-}else{
-  print("Please define 'cutoff_flag' (cutoff value for flagged cells) for the Raster* object")
-}
+cutoff_flag <- 0.92
 
 r[r > cutoff_flag] <- NA
-
 ```
 
 
@@ -75,8 +70,6 @@ There are several approaches to resample data to a coarser resolution. The area-
 
 ```{r echo = FALSE}
 kable(cutoff_method_df[, c(1:2, 7)], caption = "")
-
-cutoff_method_df_ndvi_method <- cutoff_method_df[cutoff_method_df$Data.layer.in.file == "NDVI", 7]
 
 ```
 
@@ -125,7 +118,7 @@ Then, the 300m product to be resampled can be geographically subset accordingly 
 
 
 ```{r echo = TRUE}
-#The following vectors contain Long and Lat coordinates, respectively, of the #1km grid (edges of the cells):
+#The following vectors contain Long and Lat coordinates, respectively, of the 1km grid (edges of the cells):
 x_ext <- seq((-180 - ((1 / 112) / 2)), 180, (1/112))
 y_ext <- seq((80 + ((1 / 112) / 2)), - 60, - (1/112))
 ```
@@ -159,7 +152,7 @@ if(exists("r_1km") & all(round(res(r_1km), 7) == round(0.00892857, 7)) &
 }
 
 
-## Adjustng extent
+## Adjusting extent
 extnt <- extent(r)
   
 repeat{# adjusting columns (Lon) at left
@@ -191,12 +184,16 @@ r <- crop(r, extnt)
 ```
 
 
-When these checks and coorections are made, the process of resampling itself can go ahead using *aggregate()*.
+When these checks and coorections are made, the process of resampling itself can go ahead using *aggregate()*. The resample method can be assigned at this point.
 
 ```{r}
+aggr_method <- "median"
+aggr_method <- "modal"
+aggr_method <- "closest_to_mean"
+aggr_method <- "mean"
 r300m_resampled1km_Aggr <- aggregate(r,
                                      fact = 3, # from 333m to 1km  
-                                     fun = mean, 
+                                     fun = aggr_method, 
                                      na.rm = TRUE, 
                                      filename = '')
 
@@ -208,6 +205,9 @@ Finally, a couple of plots in case the user wants to take a look at the resample
 
 ```{r}
 plot(r, main = 'Original map at 300m')
+```
+
+```{r}
 plot(r300m_resampled1km_Aggr, main = 'Resampled map to 1km')
 ```
 
