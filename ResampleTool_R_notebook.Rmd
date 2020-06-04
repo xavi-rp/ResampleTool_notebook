@@ -11,7 +11,7 @@ This notebook shows how to resample PROBA-V products (i.e. NDVI, FAPAR...) from 
 # Reading in and preparing data 
 
 When running this notebook on VITO’s servers, the user can follow the directions shown in 
-https://nbviewer.jupyter.org/github/VITObelgium/notebook-samples/raw/master/datasets/probav/Reading%20PROBA-V%20using%20R.ipynb to find locations of PROBA-V products. Doing so, the data set (netCDF files) will be located and available in the VITO's servers.
+https://nbviewer.jupyter.org/github/VITObelgium/notebook-samples/raw/master/datasets/probav/Reading%20PROBA-V%20using%20R.ipynb to find locations of PROBA-V products and prepare them to be used. Doing so, the data set (netCDF files) will be located and available in the VITO's servers.
 
 Alternatively, when working locally, the R-user can choose to automatically download Copernicus land data (https://land.copernicus.eu/global/) using the functions found in https://github.com/cgls/Copernicus-Global-Land-Service-Data-Download-with-R. 
 
