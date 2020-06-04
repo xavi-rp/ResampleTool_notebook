@@ -3,9 +3,14 @@ title: "Resample Tool With R"
 output: html_notebook
 ---
 
+# Resampling Tool
+
+This notebook shows how to resample PROBA-V products (i.e. NDVI, FAPAR...) from 333m resolution to 1km using R-based packages and functions.
+
+
 # Reading in and preparing data 
 
-When running the notebooks on VITO’s servers, the user can follow the directions shown in 
+When running this notebook on VITO’s servers, the user can follow the directions shown in 
 https://nbviewer.jupyter.org/github/VITObelgium/notebook-samples/raw/master/datasets/probav/Reading%20PROBA-V%20using%20R.ipynb to find locations of PROBA-V products. Doing so, the data set (netCDF files) will be located and available in the VITO's servers.
 
 Alternatively, when working locally, the R-user can choose to automatically download Copernicus land data (https://land.copernicus.eu/global/) using the functions found in https://github.com/cgls/Copernicus-Global-Land-Service-Data-Download-with-R. 
@@ -46,7 +51,7 @@ cutoff_method_df <- cutoff_method_df[, c("Product","Data.layer.in.file",
                                          "Resample.method", "Additional.cutoff")]
 
 #print(cutoff_method_df)
-kable(cutoff_method_df[, 1:6], caption = "")
+knitr::kable(cutoff_method_df[, 1:6], caption = "", "markdown")
 
 cutoff_method_df_ndvi_max <- cutoff_method_df[cutoff_method_df$Data.layer.in.file == "NDVI", c(4, 6)]
 ```
@@ -137,6 +142,7 @@ if(exists("r_1km") & all(round(res(r_1km), 7) == round(0.00892857, 7)) &
    round(extent(r_1km)[2], 7) %in% round(x_ext, 7) &
    round(extent(r_1km)[3], 7) %in% round(y_ext, 7) &
    round(extent(r_1km)[4], 7) %in% round(y_ext, 7))){  # r_1km exists but does not match with PROBA-V 1km products
+  
   stop("Please provide a 1km object adjusted to 1km PROBA-V products")
 
 }else if (!exists("r_1km") & exists("coords4subset") &
@@ -187,9 +193,19 @@ r <- crop(r, extnt)
 When these checks and coorections are made, the process of resampling itself can go ahead using *aggregate()*. The resample method can be assigned at this point.
 
 ```{r}
-aggr_method <- "median"
-aggr_method <- "modal"
-aggr_method <- "closest_to_mean"
+#aggr_method <- "median"
+#aggr_method <- "modal"
+#aggr_method <- "closest_to_mean"
+
+closest_to_mean <- function(x, ...){
+  dts <- list(...)
+  if(is.null(dts$na_rm)) dts$na_rm <- TRUE
+  x_mean <- mean(x, na.rm = dts$na_rm)
+  closest2avrge <- x[order(abs(x - x_mean))][1]
+  return(closest2avrge)
+
+}
+
 aggr_method <- "mean"
 r300m_resampled1km_Aggr <- aggregate(r,
                                      fact = 3, # from 333m to 1km  
