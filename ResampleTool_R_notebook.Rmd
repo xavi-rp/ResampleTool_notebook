@@ -2,9 +2,10 @@
 title: "Resample Tool With R"
 output: html_notebook
 author: Xavier Rotllan-Puig (xavier.rotllan.puig@aster-projects.cat) and Tim Jacobs (VITO, Copernicus Global Help Desk)
+note: "The .ipynb has been translated from .Rmd using 'jupytext'"
 ---
 
-# Resampling Tool
+# Purpose
 
 This notebook shows how to resample Copernicus Global Land Service vegetation-related products (i.e. NDVI, FAPAR...), based on PROBA-V observations, from 333m resolution to 1km using R-based packages and functions.
 
