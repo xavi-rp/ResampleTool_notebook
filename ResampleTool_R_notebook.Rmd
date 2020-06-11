@@ -1,57 +1,106 @@
 ---
 title: "Resample Tool With R"
 output: html_notebook
+author: Xavier Rotllan-Puig (xavier.rotllan.puig@aster-projects.cat) and Tim Jacobs (VITO, Copernicus Global Help Desk)
+note: "The .ipynb has been translated from .Rmd using 'jupytext'"
 ---
 
-# Reading in and preparing data 
+# Purpose
 
-When running the notebooks on VITO’s servers, the user can follow the directions shown in 
-https://nbviewer.jupyter.org/github/VITObelgium/notebook-samples/raw/master/datasets/probav/Reading%20PROBA-V%20using%20R.ipynb to find locations of PROBA-V products. Doing so, the data set (netCDF files) will be located and available in the VITO's servers.
+This notebook shows how to resample Copernicus Global Land Service vegetation-related products (i.e. NDVI, FAPAR...), based on PROBA-V observations, from 333m resolution to 1km using R-based packages and functions.
 
-Alternatively, when working locally, the R-user can choose to automatically download Copernicus land data (https://land.copernicus.eu/global/) using the functions found in https://github.com/cgls/Copernicus-Global-Land-Service-Data-Download-with-R. 
+It is intended for users who would like to continue temporarily their 1km time series, in near real time, before switching to the new 333m baseline resolution.
 
-Once the data set is available, *raster* package functionality is used to prepare it for resampling. 
+
+# Step 1: Download or locate the input 333m product files
+
+When running this notebook on VITO’s servers (e.g. notebooks.terrascope.be, notebooks.vgt.vito.be), you can follow the directions in [this notebook](https://nbviewer.jupyter.org/github/VITObelgium/notebook-samples/raw/master/datasets/probav/Reading%20PROBA-V%20using%20R.ipynb) to find the locations of input products. Doing so, the data set (netCDF files) will be located and available in the VITO's servers. In particular for the product types BioPar_NDVI300_V1_Global for 333m NDVI v1, BioPar_LAI300_V1_Global for LAI 333m v1 and similar for FAPAR, FCOVER, DMP and GDMP.
+
+Alternatively, if you are working locally on your PC or laptop, you can choose to automatically download Copernicus Global Land Service products using the functions found in https://github.com/cgls/Copernicus-Global-Land-Service-Data-Download-with-R.
+
+For more details on the products, please see the description and Product User Manuals documentation at https://land.copernicus.eu/global/products/
+
+
+
+# Step 2: Reading in the data and dealing with invalid (no-data) pixels
+
+Once the data set is available, *raster* package functionality is used to prepare it for resampling. The use of the *knitr* package is optional, it only helps with pretty-printing tables.
 
 ```{r}
 library(raster)
+if(require(knitr) == FALSE){install.packages("knitr", repos = "https://cloud.r-project.org"); library(knitr)} else {library(knitr)}
 
 # ndvi_files is a list of the available files (netCFD or Raster* objects)
-ndvi_files <- list(paste0("/Users/xavi_rp/Documents/D6_LPD/NDVI_resample", "/ndvi300m_Cat.tif"))
-r <- raster(ndvi_files[1])
-
+ndvi_files <- list(paste0(getwd(), "/ndvi300m_Cat_kk.tif"))
+r <- raster(ndvi_files[[1]])
 ```
 
 
-The original netCDF file might contain flagged data corresponding to NoData (NA), etc, which needs to be dealt with. In case of the NDVI products and netCDF files, assigned values > 250 are flagged and need to be converted into NA. When netCDF files are read in as a *Raster*\* object and values transformed into real NDVI values, the cuttoff for flagged cells is 0.92. Therefore, all cells > 0.92 have to be set to NA.
+The original Global Land product files typically come in two flavours: the global netCDF4 files (the native production format) or GeoTIFF subsets. Both can contain specific values (flags) for invalid pixels, which need to be dealt with. For this example, we’ll convert those into NoData (NA) values.
 
+The range of valid pixel values, the scale factor and offset and any flag values used are described in the product documentation and netCDF file metadata.
+
+For your convenience, a short table was prepared summarizing the range of valid values, both in raw digital number (DN) and physical value, for each product and data layer. Let’s read in this table from the csv file. 
+
+The physical or real value is computed as digital number * scale + offset, but this applies only for valid pixels.
+
+```{r echo = FALSE}
+cutoff_method_df <- read.csv(paste0(getwd(), "/Table_cutoff_and_resampleMethod.csv"),
+                             stringsAsFactors = FALSE,
+                             header = TRUE)
+cutoff_method_df <- as.data.frame(gsub("(\\[|\\])", "", as.matrix(cutoff_method_df)))
+cutoff_method_df <- as.data.frame(gsub("(\\.\\.\\.)", "_", as.matrix(cutoff_method_df)))
+
+cutoff_method_df$Valid.range.DN.min <- unlist(lapply(cutoff_method_df$Valid.range.DN, function(x) unlist(strsplit(as.character(x), "_"))[[1]]))
+cutoff_method_df$Valid.range.DN.max <- unlist(lapply(cutoff_method_df$Valid.range.DN, function(x) unlist(strsplit(as.character(x), "_"))[[2]]))
+
+cutoff_method_df$Valid.range.physical.min <- unlist(lapply(cutoff_method_df$Valid.range.physical, function(x) unlist(strsplit(as.character(x), "_"))[[1]]))
+cutoff_method_df$Valid.range.physical.max <- unlist(lapply(cutoff_method_df$Valid.range.physical, function(x) unlist(strsplit(as.character(x), "_"))[[2]]))
+
+cutoff_method_df <- cutoff_method_df[, c("Product","Data.layer.in.file",
+                                         "Valid.range.DN.min", "Valid.range.DN.max",
+                                         "Valid.range.physical.min", "Valid.range.physical.max",
+                                         "Resample.method", "Additional.cutoff")]
+
+kable(cutoff_method_df[, 1:6], caption = "")
+```
+
+For example, in the 300m NDVI products, digital values > 250 are flagged and need to be converted into NA. When netCDF files are read in as a *Raster*\* object, the digital values are scaled into real NDVI values automatically. To make sure to not use any of the invalid (flagged) pixels, we’ll have to be set all pixels with > 0.92 (=DN 250 x scale + offset) to NA.
 
 
 ```{r}
-if(grepl("ndvi", ndvi_files[1], ignore.case = TRUE)){
-  cuttoff_flag <- 0.92
-}else{
-  stop("Please define 'cuttoff_flag' (cuttoff value for flagged cells) for the Raster* object")
-}
+cutoff_flag <- 0.92
 
-r[r > cuttoff_flag] <- NA
-
+r[r > cutoff_flag] <- NA
 ```
 
 
 
-# Resampling using the aggregation approach
+# Step 3: Checking the geographic extent and raster cropping
 
-There are several approaches to resample data to a coarser resolution. The area-based aggregation methods are based in grouping rectangular areas of cells of the finer resolution image to create a new map with larger cells. To do that, the function *aggregate()* of the package *raster* needs to know the factor of aggregation. In this case, the factor is 3 as it needs to go from 333m to 1km. In addition, *aggregate()* can perform the calculation using different functions. While the default is the average (*mean()*) it can work also with *modal()*, *max()* or *min()*.
+In the area-based resampling, we’ll aggregate a matrix of 3x3 pixels at the 333m resolution into a pixel at 1km resolution (*aggregate()* with factor 3). But before we do that, we need to make sure that the geographic extent matches nicely in both resolutions.
 
-As for the pixel coordinate definition for both the 300m and the 1km products, no proper aggregation of
-the finer resolution product can be performed at the minimum and maximum latitude and longitude[^1]. For this reason, the *RasterLayer* object needs to be 'cropped' accordingly.
+In your application, you may working with either
+
+* global 1km data
+
+* or a subset of one or more areas, whereby the desired extent is either defined as a coordinate vector or the extent of the series of 1km raster files that you are looking to continue.
+
+This determines the next steps and raster cropping to be performed, so let’s take a look at these two cases.
 
 
-[^1]: Erwin Wolters, Wouter Dierckx, Marian-Daniel Iordache, and Else Swinnen. (16/03/2018) PROBA-V Products User Manual v3.01. http://proba-v.vgt.vito.be/sites/proba-v.vgt.vito.be/files/products_user_manual.pdf
+## Option 1: resampling an entire global 300m raster
+
+**Note:**  File formats like netCDF4 and GeoTIFF can be optimized for reading or storing large rasters through chunking and compression. Take care when reading in such a full global raster in your computer’s working memory in one go. A global 300m raster has 120960 columns and 47040 rows, or close to 5.7bn cells. The size in bytes of each cell is provided in the CSV file (column Bytes per Cell). Consider working in subsets or using parallel computing techniques (rasterOptions, cluster processing, etc.), as described [here](https://strimas.com/post/processing-large-rasters-in-r/).
+
+Given the grid definition of the global 300m and 1km products (see image below), no proper aggregation of the finer resolution product can be performed at the minimum and maximum latitude and longitude. For this reason, the 300m *RasterLayer* object needs to be cropped accordingly.
+
+![](Pixel_centre_example_CGLS.png)
 
 
 ```{r}
-if(extent(r)[1] < -180 & extent(r)[2] > 179.997){  # full image
+if(extent(r)[1] < -180 & extent(r)[2] > 179.997 &
+   extent(r)[3] < -59.99554 & extent(r)[4] > 80){  # checking for full product (image)
   extnt_r <- extent(r)
   extnt_r[1] <- extent(r)[1] + (2 * (1 / 336)) # x-min
   extnt_r[2] <- extent(r)[2] - (1 * (1 / 336)) # x-max
@@ -59,43 +108,121 @@ if(extent(r)[1] < -180 & extent(r)[2] > 179.997){  # full image
   extnt_r[4] <- extent(r)[4] - (2 * (1 / 336))  # y-max
   r <- crop(r, extnt_r)
 }else{
-  stop("If you have subset part of the image, make sure that your new extent coincides with the 1km product grid.
-       (see http://proba-v.vgt.vito.be/sites/proba-v.vgt.vito.be/files/products_user_manual.pdf, pg 30). 
-       If it does, go ahead with the resampling.")
+  print("The image is not the full product; therefore, extent needs to be checked")
+}
+```
+
+
+
+## Option 2: resampling geographic subsets
+
+If you want to resample a geographic subset of the original 300m product, its new extent should match with the 1km product grid.
+
+This target 1km grid or extent can be either 
+
+* retrieved from a 1km *Raster*\* object, i.e. one of the rasters in your existing 1km time series:
+
+```{r}
+ndvi_files_1km <- list(paste0(getwd(), "/ndvi1km_Cat.tif"))
+r_1km <- raster(ndvi_files_1km[[1]])
+
+if(exists("r_1km") & all(round(res(r_1km), 10) == round(0.0089285714, 10))){
+   my_extent <- extent(r_1km)
+}else{
+  stop("The given raster file does not exist or does not have the 1km resolution.")
+}
+```
+
+
+* or provided as a vector with longitude/latitude coordinates, in decimal degrees, taking the form *c(Xmin, Xmax, Ymin, Ymax)*. Notice that these coordinates might be slightly adjusted to the 1km PROBA-V products grid.
+
+```{r}
+coords4subset <- c(0, 4, 40, 43)
+my_extent <- extent(coords4subset)
+```
+
+
+Next, we’ll check if the new extent is found in the PROBA-V 1km product grid (cell boundaries). If it's not, it will be adjusted. Then, the product can be cropped to the new extent.
+
+
+```{r echo = TRUE}
+# The following vectors contain Long and Lat coordinates, respectively, of the 1km grid (cell boundaries):
+x_ext <- seq((-180 - ((1 / 112) / 2)), 180, (1/112))
+y_ext <- seq((80 + ((1 / 112) / 2)), - 60, - (1/112))
+ 
+if(!all(round(my_extent[1], 7) %in% round(x_ext, 7) &
+        round(my_extent[2], 7) %in% round(x_ext, 7) &
+        round(my_extent[3], 7) %in% round(y_ext, 7) &
+        round(my_extent[4], 7) %in% round(y_ext, 7))){
+  # The given extent from raster or coordinate vector does not fit into the 1km PROBA-V grid, so we are going to adjust it
+  for(crd in 1:length(as.vector(my_extent))){
+    if(crd <= 2){
+      my_extent[crd] <- x_ext[order(abs(x_ext - my_extent[crd]))][1]
+    }else{
+      my_extent[crd] <- y_ext[order(abs(y_ext - my_extent[crd]))][1]
+    }
+  }
+  
+  # Now we can crop the 300m raster
+  r <- crop(r, my_extent)
+}
+```
+
+
+# Step 4: Resampling using the aggregation approach
+
+There are several approaches to resample data to a coarser resolution. The area-based aggregation methods group rectangular areas of cells of the finer resolution image to create a new map with larger cells. 
+
+In this case, we’ll use the function *aggregate()* of the package *raster*, setting its aggregation factor  to 3 (fact = 3) as each 1km cell will be built from a group of 3x3 333m cells.
+
+In addition, *aggregate()* can perform the calculation using different functions. While the default is the average (*mean()*) it can work also with *modal()*, *max()*, *min()* or even your own *ad hoc* functions (see *closest_to_mean()* example below). 
+
+The following table recommends the best suited method for each product/layer.
+
+```{r echo = FALSE}
+kable(cutoff_method_df[, c(1:2, 7)], caption = "")
+```
+
+
+Now the process of resampling itself can go ahead using *aggregate()*. The resample method can be assigned at this point.
+
+```{r}
+#aggr_method <- "median"
+#aggr_method <- "modal"
+#aggr_method <- "closest_to_mean"
+
+closest_to_mean <- function(x, ...){
+  dts <- list(...)
+  if(is.null(dts$na_rm)) dts$na_rm <- TRUE
+  x_mean <- mean(x, na.rm = dts$na_rm)
+  closest2avrge <- x[order(abs(x - x_mean))][1]
+  return(closest2avrge)
+
 }
 
-```
-
-
-If the user has subset part of the original 300m product, its new extention should match with the 1km product grid. Otherwise, the comparison or any other kind of calculations involving any of the 1km products cannot be made properly. The following vectors contain Long and Lat coordinates, respectively, of the 1km grid (edges of the cells):
-
-```{r}
-
-x_ext <- seq((-180 - ((1 / 112) / 2)), 180, (3 * (1 / 336)))
-y_ext <- seq((80 + ((1 / 112) / 2)), - 60, - (3 * (1 / 336)))
-
-```
-
-
-
-When these checks and coorections are made, the process of resampling itself can go ahead using *aggregate()*.
-
-```{r}
+aggr_method <- "mean"
 r300m_resampled1km_Aggr <- aggregate(r,
                                      fact = 3, # from 333m to 1km  
-                                     fun = mean, 
+                                     fun = aggr_method, 
                                      na.rm = TRUE, 
                                      filename = '')
-
 ```
 
 
 
-Finally, a couple of plots in case the user wants to take a look at the resampled map.
+# Step 5: Check the outcome and final remarks
+
+Here are a couple of plots in case the user wants to take a look at the resampled map.
 
 ```{r}
 plot(r, main = 'Original map at 300m')
+```
+
+```{r}
 plot(r300m_resampled1km_Aggr, main = 'Resampled map to 1km')
 ```
 
 
+In addition, you could apply the chosen resample method on older (non-near real time) 300m products and correlate the results with the 1km product of the same period.
+
+This document provides the results of such comparisons between 1km-resampled and 1km-produced data layers.
