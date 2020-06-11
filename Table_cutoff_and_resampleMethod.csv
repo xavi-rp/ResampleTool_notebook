@@ -1,24 +1,27 @@
-Product,Data layer in file,Valid range DN,Valid range physical,Resample method,Additional cutoff
-NDVI 300m,NDVI,[0...250],[-0.08...0.92],mean,DN>250; phys>0.92
-LAI 300m,LAI,[0...210],[0...7],mean,none; the only value with DN>210 or phys>7 is the auto-masked no-data value
-LAI 300m,RMSE,[0...210],[0...7],mean,none; same rationale as for LAI layer
-LAI 300m,LENGTH_AFTER,[0...60],[0...60],closest_to_mean or median?,none; only value > 60 is the no-data
-LAI 300m,LENGTH_BEFORE,[15...210],[15...210],closest_to_mean or median?,none; only value <15 or >210 is the no-data
-LAI 300m,NOBS,[0...40],[0...40],modal; mean or median?,none
-LAI 300m,QFLAG,[0...255],[0...255],modal,none
-FAPAR 300m,FAPAR,[0...235],[0...0.94],mean,none; only value with DN > 235 or phys > 0.94 is the no-data value
-FAPAR 300m,RMSE,[0...235],[0...0.94],mean,none; same rationale as for FAPAR layer
-FAPAR 300m,LENGTH_AFTER,[0...60],[0...60],closest_to_mean or median?,none; only value > 60 is the no-data
-FAPAR 300m,LENGTH_BEFORE,[15...210],[15...210],closest_to_mean or median?,none; only value <15 or >210 is the no-data
-FAPAR 300m,NOBS,[0...40],[0...40],modal; mean or median?,none
-FAPAR 300m,QFLAG,[0...255],[0...255],modal,none
-FCOVER 300m,FCOVER,[0...250],[0...1],mean,none; only value with DN > 250 or phys > 1.0 is the no-data value
-FCOVER 300m,RMSE,[0...250],[0...1],mean,none; same rationale as for FCOVER layer
-FCOVER 300m,LENGTH_AFTER,[0...60],[0...60],closest_to_mean or median?,none; only value > 60 is the no-data
-FCOVER 300m,LENGTH_BEFORE,[15...210],[15...210],closest_to_mean or median?,none; only value <15 or >210 is the no-data
-FCOVER 300m,NOBS,[0...40],[0...40],modal; mean or median?,none
-FCOVER 300m,QFLAG,[0...255],[0...255],modal,none
-DMP 300m,DMP,[0...32767],[0...327.67],mean,remove < 0
-DMP 300m,QFLAG,[0...255],[0...255],modal,none?
-GDMP 300m,GDMP,[0...32767],[0...655.34],mean,remove < 0
-GDMP 300m,QFLAG,[0...255],[0...255],modal,none?
+Product,Data layer in file,Bytes per Cell,Valid DN min, Valid DN max,Valid physical min, Valid physical max,Resample method,Additional cutoff
+NDVI 300m,NDVI,1,0,250,-0.08,0.92,mean,remove DN>250; phys>0.92
+NDVI 300m,NDVI_unc,2,0,1000,0,1,uncertainty_propagation,none
+NDVI 300m,QFLAGS,1,0,255,0,255,modal,none
+NDVI 300m,NOBS,1,0,255,0,255,modal; mean or median,none
+LAI 300m,LAI,1,0,210,0,7,mean,none
+LAI 300m,RMSE,1,0,210,0,7,mean,none
+LAI 300m,LENGTH_AFTER,1,0,60,0,60,closest_to_mean or round_mean_to_integer,none
+LAI 300m,LENGTH_BEFORE,1,15,210,15,210,closest_to_mean or round_mean_to_integer,none
+LAI 300m,NOBS,1,0,40,0,40,closest_to_mean or round_mean_to_integer,none
+LAI 300m,QFLAG,1,0,255,0,255,modal,none
+FAPAR 300m,FAPAR,1,0,235,0,0.94,mean,none
+FAPAR 300m,RMSE,1,0,235,0,0.94,mean,none
+FAPAR 300m,LENGTH_AFTER,1,0,60,0,60,closest_to_mean or round_mean_to_integer,
+FAPAR 300m,LENGTH_BEFORE,1,15,210,15,210,closest_to_mean or round_mean_to_integer,
+FAPAR 300m,NOBS,1,0,40,0,40,closest_to_mean or round_mean_to_integer,none
+FAPAR 300m,QFLAG,1,0,255,0,255,modal,none
+FCOVER 300m,FCOVER,1,0,250,0,1,mean,none
+FCOVER 300m,RMSE,1,0,250,0,1,mean,none
+FCOVER 300m,LENGTH_AFTER,1,0,60,0,60,closest_to_mean or round_mean_to_integer,none
+FCOVER 300m,LENGTH_BEFORE,1,15,210,15,210,closest_to_mean or round_mean_to_integer,none
+FCOVER 300m,NOBS,1,0,40,0,40,closest_to_mean or round_mean_to_integer,none
+FCOVER 300m,QFLAG,1,0,255,0,255,modal,none
+DMP 300m,DMP,2,0,32767,0,327.67,mean,remove < 0
+DMP 300m,QFLAG,1,0,255,0,255,modal,none
+GDMP 300m,GDMP,2,0,32767,0,655.34,mean,remove < 0
+GDMP 300m,QFLAG,1,0,255,0,255,modal,none
