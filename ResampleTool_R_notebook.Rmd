@@ -159,9 +159,9 @@ if(!all(round(my_extent[1], 7) %in% round(x_ext, 7) &
 
 There are several approaches to resample data to a coarser resolution. The area-based aggregation methods group rectangular areas of cells of the finer resolution image to create a new map with larger cells. 
 
-In this case, we’ll use the function *aggregate()* of the package *raster*, setting its aggregation factor  to 3 (fact = 3) as each 1km cell will be built from a group of 3x3 333m cells.
+In this case, we’ll use the function *aggregate()* of the package *raster*, setting its aggregation factor to 3 (fact = 3) as each 1km cell will be built from a group of 3x3 333m cells. In addition, it's advised to include a condition that at least 5 out of the 9 pixels had to have valid values (i.e. not NA).
 
-In addition, *aggregate()* can perform the calculation using different functions. While the default is the average (*mean()*) it can work also with *modal()*, *max()*, *min()* or even your own *ad hoc* functions (see *closest_to_mean()* example below). 
+*aggregate()* can perform the calculation using different functions. While the default is the average (*mean()*) it can work also with *modal()*, *max()*, *min()* or even your own *ad hoc* functions (see *closest_to_mean()* and *mean_w.cond()* examples below). 
 
 The following table recommends the best suited method for each product/layer.
 
@@ -177,16 +177,33 @@ Now the process of resampling itself can go ahead using *aggregate()*. The resam
 #aggr_method <- "modal"
 #aggr_method <- "closest_to_mean"
 
-closest_to_mean <- function(x, ...){
-  dts <- list(...)
-  if(is.null(dts$na_rm)) dts$na_rm <- TRUE
-  x_mean <- mean(x, na.rm = dts$na_rm)
-  closest2avrge <- x[order(abs(x - x_mean))][1]
-  return(closest2avrge)
-
+mean_w.cond <- function(x, ...){ # mean including condition 'minimum 5 valid pixels'
+  if(sum(!is.na(x)) > 4){
+    dts <- list(...)
+    if(is.null(dts$na_rm)) dts$na_rm <- TRUE
+    x_mean <- mean(x, na.rm = dts$na_rm)
+    return(x_mean)
+  }else{
+    x_mean <- NA
+    return(x_mean)
+  }
 }
 
-aggr_method <- "mean"
+closest_to_mean <- function(x, ...){
+  if(sum(!is.na(x)) > 4){ # minimum 5 valid pixels
+    dts <- list(...)
+    if(is.null(dts$na_rm)) dts$na_rm <- TRUE
+    x_mean <- mean(x, na.rm = dts$na_rm)
+    closest2avrge <- x[order(abs(x - x_mean))][1]
+    return(closest2avrge)
+  }else{
+    closest2avrge <- NA
+    return(closest2avrge)
+  }
+}
+
+
+aggr_method <- "mean_w.cond"
 r300m_resampled1km_Aggr <- aggregate(r,
                                      fact = 3, # from 333m to 1km  
                                      fun = aggr_method, 
