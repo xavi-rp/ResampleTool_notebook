@@ -48,21 +48,7 @@ The physical or real value is computed as digital number * scale + offset, but t
 cutoff_method_df <- read.csv(paste0(getwd(), "/Table_cutoff_and_resampleMethod.csv"),
                              stringsAsFactors = FALSE,
                              header = TRUE)
-cutoff_method_df <- as.data.frame(gsub("(\\[|\\])", "", as.matrix(cutoff_method_df)))
-cutoff_method_df <- as.data.frame(gsub("(\\.\\.\\.)", "_", as.matrix(cutoff_method_df)))
-
-cutoff_method_df$Valid.range.DN.min <- unlist(lapply(cutoff_method_df$Valid.range.DN, function(x) unlist(strsplit(as.character(x), "_"))[[1]]))
-cutoff_method_df$Valid.range.DN.max <- unlist(lapply(cutoff_method_df$Valid.range.DN, function(x) unlist(strsplit(as.character(x), "_"))[[2]]))
-
-cutoff_method_df$Valid.range.physical.min <- unlist(lapply(cutoff_method_df$Valid.range.physical, function(x) unlist(strsplit(as.character(x), "_"))[[1]]))
-cutoff_method_df$Valid.range.physical.max <- unlist(lapply(cutoff_method_df$Valid.range.physical, function(x) unlist(strsplit(as.character(x), "_"))[[2]]))
-
-cutoff_method_df <- cutoff_method_df[, c("Product","Data.layer.in.file",
-                                         "Valid.range.DN.min", "Valid.range.DN.max",
-                                         "Valid.range.physical.min", "Valid.range.physical.max",
-                                         "Resample.method", "Additional.cutoff")]
-
-kable(cutoff_method_df[, 1:6], caption = "")
+kable(cutoff_method_df[, 1:7], caption = "")
 ```
 
 For example, in the 300m NDVI products, digital values > 250 are flagged and need to be converted into NA. When netCDF files are read in as a *Raster*\* object, the digital values are scaled into real NDVI values automatically. To make sure to not use any of the invalid (flagged) pixels, we’ll have to be set all pixels with > 0.92 (=DN 250 x scale + offset) to NA.
@@ -91,7 +77,7 @@ This determines the next steps and raster cropping to be performed, so let’s t
 
 ## Option 1: resampling an entire global 300m raster
 
-**Note:**  File formats like netCDF4 and GeoTIFF can be optimized for reading or storing large rasters through chunking and compression. Take care when reading in such a full global raster in your computer’s working memory in one go. A global 300m raster has 120960 columns and 47040 rows, or close to 5.7bn cells. The size in bytes of each cell is provided in the CSV file (column Bytes per Cell). Consider working in subsets or using parallel computing techniques (rasterOptions, cluster processing, etc.), as described [here](https://strimas.com/post/processing-large-rasters-in-r/).
+**Note:**  File formats like netCDF4 and GeoTIFF can be optimized for reading or storing large rasters through chunking and compression. Take care when reading in such a full global raster in your computer’s working memory in one go. A global 300m raster has 120960 columns and 47040 rows, or close to 5.7bn cells. The size in bytes of each cell is provided in the CSV file (column Bytes per Cell; see table above). Consider working in subsets or using parallel computing techniques (rasterOptions, cluster processing, etc.), as described [here](https://strimas.com/post/processing-large-rasters-in-r/).
 
 Given the grid definition of the global 300m and 1km products (see image below), no proper aggregation of the finer resolution product can be performed at the minimum and maximum latitude and longitude. For this reason, the 300m *RasterLayer* object needs to be cropped accordingly.
 
@@ -180,7 +166,7 @@ In addition, *aggregate()* can perform the calculation using different functions
 The following table recommends the best suited method for each product/layer.
 
 ```{r echo = FALSE}
-kable(cutoff_method_df[, c(1:2, 7)], caption = "")
+kable(cutoff_method_df[, c(1:2, 8)], caption = "")
 ```
 
 
