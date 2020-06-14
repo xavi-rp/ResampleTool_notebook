@@ -161,7 +161,7 @@ There are several approaches to resample data to a coarser resolution. The area-
 
 In this case, we’ll use the function *aggregate()* of the package *raster*, setting its aggregation factor to 3 (fact = 3) as each 1km cell will be built from a group of 3x3 333m cells. In addition, it's advised to include a condition that at least 5 out of the 9 pixels had to have valid values (i.e. not NA).
 
-*aggregate()* can perform the calculation using different functions. While the default is the average (*mean()*) it can work also with *modal()*, *max()*, *min()* or even your own *ad hoc* functions (see *closest_to_mean()* and *mean_w.cond()* examples below). 
+*aggregate()* can perform the calculation using different functions. While the default is the average (*mean()*) it can work also with *modal()*, *max()*, *min()* or even your own *ad hoc* functions (see *mean_w.cond()*, *closest_to_mean()* and *uncert_propag()* examples below). 
 
 The following table recommends the best suited method for each product/layer.
 
@@ -173,12 +173,13 @@ kable(cutoff_method_df[, c(1:2, 8)], caption = "")
 Now the process of resampling itself can go ahead using *aggregate()*. The resample method can be assigned at this point.
 
 ```{r}
-#aggr_method <- "median"
-#aggr_method <- "modal"
+#aggr_method <- "mean_w.cond"
 #aggr_method <- "closest_to_mean"
+#aggr_method <- "uncert_propag"
 
 mean_w.cond <- function(x, ...){ # mean including condition 'minimum 5 valid pixels'
-  if(sum(!is.na(x)) > 4){
+  n_valid <- sum(!is.na(x)) # number of cells with valid value
+  if(n_valid > 4){
     dts <- list(...)
     if(is.null(dts$na_rm)) dts$na_rm <- TRUE
     x_mean <- mean(x, na.rm = dts$na_rm)
@@ -190,7 +191,8 @@ mean_w.cond <- function(x, ...){ # mean including condition 'minimum 5 valid pix
 }
 
 closest_to_mean <- function(x, ...){
-  if(sum(!is.na(x)) > 4){ # minimum 5 valid pixels
+  n_valid <- sum(!is.na(x)) # number of cells with valid value
+  if(n_valid > 4){  # minimum 5 valid pixels
     dts <- list(...)
     if(is.null(dts$na_rm)) dts$na_rm <- TRUE
     x_mean <- mean(x, na.rm = dts$na_rm)
@@ -199,6 +201,19 @@ closest_to_mean <- function(x, ...){
   }else{
     closest2avrge <- NA
     return(closest2avrge)
+  }
+}
+
+uncert_propag <- function(x, ...){ # uncertainty_propagation (including condition 'minimum 5 valid pixels')
+  n_valid <- sum(!is.na(x)) # number of cells with valid value
+  if(n_valid > 4){
+    dts <- list(...)
+    if(is.null(dts$na_rm)) dts$na_rm <- TRUE
+    unc_prp <- sqrt(sum(x^2, na.rm = dts$na_rm)) / n_valid
+    return(unc_prp)
+  }else{
+    unc_prp <- NA
+    return(unc_prp)
   }
 }
 
