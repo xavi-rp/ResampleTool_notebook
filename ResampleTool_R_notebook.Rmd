@@ -40,7 +40,7 @@ The original Global Land product files typically come in two flavours: the globa
 
 The range of valid pixel values, the scale factor and offset and any flag values used are described in the product documentation and netCDF file metadata.
 
-For your convenience, a short table was prepared summarizing the range of valid values, both in raw digital number (DN) and physical value, for each product and data layer. Let’s read in this table from the csv file. 
+For your convenience, a short table was prepared summarizing the range of valid values, both in raw digital number (DN) and physical value, for each product, version and data layer. Let’s read in this table from the csv file. 
 
 The physical or real value is computed as digital number * scale + offset, but this applies only for valid pixels.
 
@@ -48,7 +48,7 @@ The physical or real value is computed as digital number * scale + offset, but t
 cutoff_method_df <- read.csv(paste0(getwd(), "/Table_cutoff_and_resampleMethod.csv"),
                              stringsAsFactors = FALSE,
                              header = TRUE)
-kable(cutoff_method_df[, 1:7], caption = "")
+kable(cutoff_method_df[, 1:8], caption = "")
 ```
 
 For example, in the 300m NDVI products, digital values > 250 are flagged and need to be converted into NA. When netCDF files are read in as a *Raster*\* object, the digital values are scaled into real NDVI values automatically. To make sure to not use any of the invalid (flagged) pixels, we’ll have to be set all pixels with > 0.92 (=DN 250 x scale + offset) to NA.
@@ -166,9 +166,10 @@ In this case, we’ll use the function *aggregate()* of the package *raster*, se
 The following table recommends the best suited method for each product/layer.
 
 ```{r echo = FALSE}
-kable(cutoff_method_df[, c(1:2, 8)], caption = "")
+kable(cutoff_method_df[, c(1:3, 9)], caption = "")
 ```
 
+**Note:** *QFLAG cannot be resampled due to the different implementations for 1km-v2 and 300m-v1 products.
 
 Now the process of resampling itself can go ahead using *aggregate()*. The resample method can be assigned at this point.
 
