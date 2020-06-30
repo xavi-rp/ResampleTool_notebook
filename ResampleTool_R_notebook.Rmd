@@ -31,7 +31,7 @@ library(raster)
 if(require(knitr) == FALSE){install.packages("knitr", repos = "https://cloud.r-project.org"); library(knitr)} else {library(knitr)}
 
 # ndvi_files is a list of the available files (netCFD or Raster* objects)
-ndvi_files <- list(paste0(getwd(), "/ndvi300m_Cat_kk.tif"))
+ndvi_files <- list(paste0(getwd(), "/ndvi300m_Cat.tif"))
 r <- raster(ndvi_files[[1]])
 ```
 
