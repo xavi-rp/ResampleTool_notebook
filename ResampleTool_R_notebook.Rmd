@@ -33,6 +33,8 @@ if(require(knitr) == FALSE){install.packages("knitr", repos = "https://cloud.r-p
 # ndvi_files is a list of the available files (netCFD or Raster* objects)
 ndvi_files <- list(paste0(getwd(), "/ndvi300m_Cat.tif"))
 r <- raster(ndvi_files[[1]])
+
+# Note: Some warnings appear when reading in the netCDF with raster(). The one realted to variable name is irrelevant. The one related to CRS has no consequences on raster's spatial information
 ```
 
 
