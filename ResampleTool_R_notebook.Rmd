@@ -27,10 +27,10 @@ For more details on the products, please see the description and Product User Ma
 Once the data set is available, *raster* package functionality is used to prepare it for resampling. The use of the *knitr* package is optional, it only helps with pretty-printing tables.
 
 ```{r}
-library(raster)
+if(require(raster) == FALSE){install.packages("raster", repos = "https://cloud.r-project.org"); library(raster)} else {library(raster)}
 if(require(knitr) == FALSE){install.packages("knitr", repos = "https://cloud.r-project.org"); library(knitr)} else {library(knitr)}
 
-# ndvi_files is a list of the available files (netCFD or Raster* objects)
+# ndvi_files is a list of the available files (netCDF or Raster* objects)
 ndvi_files <- list(paste0(getwd(), "/ndvi300m_Cat.tif"))
 r <- raster(ndvi_files[[1]])
 

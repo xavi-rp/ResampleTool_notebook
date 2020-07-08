@@ -1,6 +1,6 @@
 Product,Version,Data layer in file,Bytes per Cell,Valid DN min, Valid DN max,Valid physical min, Valid physical max,Resample method,Additional cutoff
 NDVI 300m,v1,NDVI,1,0,250,-0.08,0.92,mean,remove DN>250; phys>0.92
-NDVI 300m,v1,NDVI_unc,2,0,1000,0,1,uncertainty_propagation,none
+NDVI 300m,v2,NDVI_unc,2,0,1000,0,1,uncertainty_propagation,none
 LAI 300m,v1,LAI,1,0,210,0,7,mean,none
 LAI 300m,v1,RMSE,1,0,210,0,7,mean,none
 LAI 300m,v1,LENGTH_AFTER,1,0,60,0,60,modal,none
