@@ -1,8 +1,7 @@
 Product,Version,Data layer in file,Bytes per Cell,Valid DN min, Valid DN max,Valid physical min, Valid physical max,Resample method,Additional cutoff
-NDVI 300m,v1,NDVI,1,0,250,-0.08,0.92,mean,remove DN>250; phys>0.92
-NDVI 300m,v2,NDVI_unc,2,0,1000,0,1,uncertainty_propagation,none
-LAI 300m,v1,LAI,1,0,210,0,7,mean,none
-LAI 300m,v1,RMSE,1,0,210,0,7,mean,none
+NDVI 300m,v1,NDVI,1,0,250,-0.08,0.92000005,mean,remove DN>250; phys>0.92
+LAI 300m,v1,LAI,1,0,210,0,6.99993,mean,none
+LAI 300m,v1,RMSE,1,0,210,0,6.99993,mean,none
 LAI 300m,v1,LENGTH_AFTER,1,0,60,0,60,modal,none
 LAI 300m,v1,LENGTH_BEFORE,1,15,210,15,210,modal,none
 LAI 300m,v1,NOBS,1,0,40,0,40,modal,none
@@ -13,13 +12,13 @@ FAPAR 300m,v1,LENGTH_AFTER,1,0,60,0,60,modal,
 FAPAR 300m,v1,LENGTH_BEFORE,1,15,210,15,210,modal,
 FAPAR 300m,v1,NOBS,1,0,40,0,40,modal,none
 FAPAR 300m,v1,QFLAG,1,0,255,0,255,modal,none
-FCOVER 300m,v1,FCOVER,1,0,250,0,1,mean,none
-FCOVER 300m,v1,RMSE,1,0,250,0,1,mean,none
+FCOVER 300m,v1,FCOVER,1,0,250,0,1.00000005,mean,none
+FCOVER 300m,v1,RMSE,1,0,250,0,1.00000005,mean,none
 FCOVER 300m,v1,LENGTH_AFTER,1,0,60,0,60,modal,none
 FCOVER 300m,v1,LENGTH_BEFORE,1,15,210,15,210,modal,none
 FCOVER 300m,v1,NOBS,1,0,40,0,40,modal,none
 FCOVER 300m,v1,QFLAG,1,0,255,0,255,modal,none
-DMP 300m,v1,DMP,2,0,32767,0,327.67,mean,remove < 0
+DMP 300m,v1,DMP,2,0,32767,0,327.669993,mean,remove < 0
 DMP 300m,v1,QFLAG,1,0,255,0,255,modal,none
-GDMP 300m,v1,GDMP,2,0,32767,0,655.34,mean,remove < 0
+GDMP 300m,v1,GDMP,2,0,32767,0,655.33999,mean,remove < 0
 GDMP 300m,v1,QFLAG,1,0,255,0,255,modal,none

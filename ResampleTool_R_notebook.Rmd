@@ -53,8 +53,9 @@ cutoff_method_df <- read.csv(paste0(getwd(), "/Table_cutoff_and_resampleMethod.c
                              header = TRUE)
 kable(cutoff_method_df[, 1:8], caption = "")
 ```
+**Note:** Mismatches between physical values in this table and the ones reported in products documentation are due to a floating point imprecision when scaling the values in R. A more comprehensive R package for data reading is under development.
 
-For example, in the 300m NDVI products, digital values > 250 are flagged and need to be converted into NA. When netCDF files are read in as a *Raster*\* object, the digital values are scaled into real NDVI values automatically. To make sure to not use any of the invalid (flagged) pixels, we’ll have to be set all pixels with > 0.92 (=DN 250 x scale + offset) to NA.
+As an example, in the 300m NDVI products, digital values > 250 are flagged and need to be converted into NA. When netCDF files are read in as a *Raster*\* object, the digital values are scaled into real NDVI values automatically. To make sure to not use any of the invalid (flagged) pixels, we’ll have to be set all pixels with > 0.92 (=DN 250 x scale + offset) to NA.
 
 
 ```{r}
