@@ -247,4 +247,4 @@ plot(r300m_resampled1km_Aggr, main = 'Resampled map to 1km')
 
 In addition, you could apply the chosen resample method on older (non-near real time) 300m products and correlate the results with the 1km product of the same period.
 
-This document provides the results of such comparisons between 1km-resampled and 1km-produced data layers.
+[This](https://github.com/xavi-rp/CGLS_ResampleTool_exercise/blob/master/report/Resample_Report_v2.5.docx) document provides the results of such comparisons between 1km-resampled and 1km-produced data layers.
