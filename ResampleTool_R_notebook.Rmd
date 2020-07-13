@@ -22,7 +22,7 @@ For more details on the products, please see the description and Product User Ma
 
 
 
-# Step 2: Reading in the data and dealing with invalid (no-data) pixels
+# Step 2: Reading in the data
 
 Once the data set is available, *raster* package functionality is used to prepare it for resampling. The use of the *knitr* package is optional, it only helps with pretty-printing tables.
 
@@ -36,32 +36,6 @@ ndvi_files <- list(paste0(getwd(), "/ndvi300m_Cat.tif"))
 r <- raster(ndvi_files[[1]])
 
 # Note: Some warnings appear when reading in the netCDF with raster(). The one realted to variable name is irrelevant. The one related to CRS has no consequences on raster's spatial information
-```
-
-
-The original Global Land product files typically come in two flavours: the global netCDF4 files (the native production format) or GeoTIFF subsets. Both can contain specific values (flags) for invalid pixels, which need to be dealt with. For this example, we’ll convert those into NoData (NA) values.
-
-The range of valid pixel values, the scale factor and offset and any flag values used are described in the product documentation and netCDF file metadata.
-
-For your convenience, a short table was prepared summarizing the range of valid values, both in raw digital number (DN) and physical value, for each product, version and data layer. Let’s read in this table from the csv file. 
-
-The physical or real value is computed as digital number * scale + offset, but this applies only for valid pixels.
-
-```{r echo = FALSE}
-cutoff_method_df <- read.csv(paste0(getwd(), "/Table_cutoff_and_resampleMethod.csv"),
-                             stringsAsFactors = FALSE,
-                             header = TRUE)
-kable(cutoff_method_df[, 1:8], caption = "")
-```
-**Note:** Mismatches between physical values in this table and the ones reported in products documentation are due to a floating point imprecision when scaling the values in R. A more comprehensive R package for data reading is under development.
-
-As an example, in the 300m NDVI products, digital values > 250 are flagged and need to be converted into NA. When netCDF files are read in as a *Raster*\* object, the digital values are scaled into real NDVI values automatically. To make sure to not use any of the invalid (flagged) pixels, we’ll have to be set all pixels with > 0.92 (=DN 250 x scale + offset) to NA.
-
-
-```{r}
-cutoff_flag <- 0.92
-
-r[r > cutoff_flag] <- NA
 ```
 
 
@@ -81,7 +55,7 @@ This determines the next steps and raster cropping to be performed, so let’s t
 
 ## Option 1: resampling an entire global 300m raster
 
-**Note:**  File formats like netCDF4 and GeoTIFF can be optimized for reading or storing large rasters through chunking and compression. Take care when reading in such a full global raster in your computer’s working memory in one go. A global 300m raster has 120960 columns and 47040 rows, or close to 5.7bn cells. The size in bytes of each cell is provided in the CSV file (column Bytes per Cell; see table above). Consider working in subsets or using parallel computing techniques (rasterOptions, cluster processing, etc.), as described [here](https://strimas.com/post/processing-large-rasters-in-r/).
+**Note:**  File formats like netCDF4 and GeoTIFF can be optimized for reading or storing large rasters through chunking and compression. Take care when reading in such a full global raster in your computer’s working memory in one go. A global 300m raster has 120960 columns and 47040 rows, or close to 5.7bn cells. The size in bytes of each cell is provided in the CSV file (column Bytes per Cell; see table below). Consider working in subsets or using parallel computing techniques (rasterOptions, cluster processing, etc.), as described [here](https://strimas.com/post/processing-large-rasters-in-r/).
 
 Given the grid definition of the global 300m and 1km products (see image below), no proper aggregation of the finer resolution product can be performed at the minimum and maximum latitude and longitude. For this reason, the 300m *RasterLayer* object needs to be cropped accordingly.
 
@@ -159,7 +133,37 @@ if(!all(round(my_extent[1], 7) %in% round(x_ext, 7) &
 ```
 
 
-# Step 4: Resampling using the aggregation approach
+
+# Step 4: Dealing with invalid (no-data) pixels
+
+The original Global Land product files typically come in two flavours: the global netCDF4 files (the native production format) or GeoTIFF subsets. Both can contain specific values (flags) for invalid pixels, which need to be dealt with. For this example, we’ll convert those into NoData (NA) values.
+
+The range of valid pixel values, the scale factor and offset and any flag values used are described in the product documentation and netCDF file metadata.
+
+For your convenience, a short table was prepared summarizing the range of valid values, both in raw digital number (DN) and physical value, for each product, version and data layer. Let’s read in this table from the csv file. 
+
+The physical or real value is computed as digital number * scale + offset, but this applies only for valid pixels.
+
+```{r echo = FALSE}
+cutoff_method_df <- read.csv(paste0(getwd(), "/Table_cutoff_and_resampleMethod.csv"),
+                             stringsAsFactors = FALSE,
+                             header = TRUE)
+kable(cutoff_method_df[, 1:8], caption = "")
+```
+**Note:** The minute differences between physical values in this table and the ones configured in the tool itself are due to a floating point imprecision when scaling the values in R. A more comprehensive R package for data reading is under development to improve on this point.
+
+As an example, in the 300m NDVI products, digital values > 250 are flagged and need to be converted into NA. When netCDF files are read in as a *Raster*\* object, the digital values are scaled into real NDVI values automatically. To make sure to not use any of the invalid (flagged) pixels, we’ll have to be set all pixels with > 0.92 (=DN 250 x scale + offset) to NA.
+
+
+```{r}
+cutoff_flag <- 0.92
+
+r[r > cutoff_flag] <- NA
+```
+
+
+
+# Step 5: Resampling using the aggregation approach
 
 There are several approaches to resample data to a coarser resolution. The area-based aggregation methods group rectangular areas of cells of the finer resolution image to create a new map with larger cells. 
 
@@ -233,7 +237,7 @@ r300m_resampled1km_Aggr <- aggregate(r,
 
 
 
-# Step 5: Check the outcome and final remarks
+# Step 6: Check the outcome and final remarks
 
 Here are a couple of plots in case the user wants to take a look at the resampled map.
 
