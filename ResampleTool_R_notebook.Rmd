@@ -24,19 +24,48 @@ For more details on the products, please see the description and Product User Ma
 
 # Step 2: Reading in the data
 
-Once the data set is available, *raster* package functionality is used to prepare it for resampling. The use of the *knitr* package is optional, it only helps with pretty-printing tables.
+Once the data set is available, *ncdf4* and *raster* packages functionalities are used to prepare it for resampling. Raw digital numbers (DN) stored in the netCFD files are used in order to avoid floating point imprecisions when scaling the values in R (R uses double-precision floating-point numbers of the  IEEE-754-Standard, whereas the values in the netCDF are stored as float32). DN values can be scaled into real physical values (PV) aftewards using the the formula PV = DN \* *scale* + *offset*, but keeping in mind that *scale* and *offset* must be those reported in each product documentation. 
+
+The use of the *knitr* package is optional, it only helps with pretty-printing tables.
 
 ```{r}
-if(require(raster) == FALSE){install.packages("raster", repos = "https://cloud.r-project.org"); library(raster)} else {library(raster)}
 if(require(ncdf4) == FALSE){install.packages("ncdf4", repos = "https://cloud.r-project.org"); library(ncdf4)} else {library(ncdf4)}
+if(require(raster) == FALSE){install.packages("raster", repos = "https://cloud.r-project.org"); library(raster)} else {library(raster)}
 if(require(knitr) == FALSE){install.packages("knitr", repos = "https://cloud.r-project.org"); library(knitr)} else {library(knitr)}
 
-# ndvi_files is a list of the available files (netCDF or Raster* objects)
+# ndvi_files is a list of the available files (Raster* objects or netCDF)
 ndvi_files <- list(paste0(getwd(), "/ndvi300m_Cat.tif"))
-r <- raster(ndvi_files[[1]])
-
-# Note: Some warnings appear when reading in the netCDF with raster(). The one realted to variable name is irrelevant. The one related to CRS has no consequences on raster's spatial information
 ```
+
+&nbsp;
+
+The original Global Land product files typically come in two flavours: the global netCDF4 files (the native production format) or GeoTIFF subsets. If the file is a GeoTIFF:
+```{r}
+if (grepl(".tif$", ndvi_files[[1]])){  
+  r <- raster(ndvi_files[[1]])
+}
+```
+
+&nbsp;
+
+If the file is a netCDF4:
+```{r}
+if (grepl(".nc$", ndvi_files[[1]])){
+  nc  <- nc_open(ndvi_files[[1]])
+  lon <- ncvar_get(nc, "lon")
+  lat <- ncvar_get(nc, "lat")
+  #Copernicus nc files have lat/long belonging to the centre of the pixel, and R uses upper/left corner;
+  #therefore, coordinates need to be adjusted
+  lon <- lon - (1/336)/2
+  lat <- lat + (1/336)/2
+  nc_data <- ncvar_get(nc, "NDVI", raw_datavals = TRUE)
+  r <- raster(t(nc_data[, seq(dim(nc_data)[2], 1, -1)]))
+  extent(r) <- c(range(lon)[1], (range(lon)[2] + (1/336)),
+                             (range(lat)[1] - (1/336)), range(lat)[2])
+  crs(r) <- CRS('+init=EPSG:4326')
+}
+```
+
 
 
 
@@ -136,13 +165,13 @@ if(!all(round(my_extent[1], 7) %in% round(x_ext, 7) &
 
 # Step 4: Dealing with invalid (no-data) pixels
 
-The original Global Land product files typically come in two flavours: the global netCDF4 files (the native production format) or GeoTIFF subsets. Both can contain specific values (flags) for invalid pixels, which need to be dealt with. For this example, we’ll convert those into NoData (NA) values.
+The original Global Land product can contain specific values (flags) for invalid pixels, which need to be dealt with. For this example, we’ll convert those into NoData (NA) values.
 
 The range of valid pixel values, the scale factor and offset and any flag values used are described in the product documentation and netCDF file metadata.
 
 For your convenience, a short table was prepared summarizing the range of valid values, both in raw digital number (DN) and physical value, for each product, version and data layer. Let’s read in this table from the csv file. 
 
-The physical or real value is computed as digital number * scale + offset, but this applies only for valid pixels.
+As said before, the physical or real value is computed as digital number * scale + offset, but this applies only for valid pixels.
 
 ```{r echo = FALSE}
 cutoff_method_df <- read.csv(paste0(getwd(), "/Table_cutoff_and_resampleMethod.csv"),
@@ -150,13 +179,12 @@ cutoff_method_df <- read.csv(paste0(getwd(), "/Table_cutoff_and_resampleMethod.c
                              header = TRUE)
 kable(cutoff_method_df[, 1:8], caption = "")
 ```
-**Note:** The minute differences between physical values in this table and the ones configured in the tool itself are due to a floating point imprecision when scaling the values in R. A more comprehensive R package for data reading is under development to improve on this point.
 
-As an example, in the 300m NDVI products, digital values > 250 are flagged and need to be converted into NA. When netCDF files are read in as a *Raster*\* object, the digital values are scaled into real NDVI values automatically. To make sure to not use any of the invalid (flagged) pixels, we’ll have to be set all pixels with > 0.92 (=DN 250 x scale + offset) to NA.
+As an example, in the 300m NDVI products, digital values > 250 are flagged and need to be converted into NA. 
 
 
 ```{r}
-cutoff_flag <- 0.92
+cutoff_flag <- 250
 
 r[r > cutoff_flag] <- NA
 ```
@@ -233,6 +261,8 @@ r300m_resampled1km_Aggr <- aggregate(r,
                                      fun = aggr_method, 
                                      na.rm = TRUE, 
                                      filename = '')
+
+r300m_resampled1km_Aggr <- round(r300m_resampled1km_Aggr)
 ```
 
 
