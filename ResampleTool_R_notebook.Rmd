@@ -24,7 +24,7 @@ For more details on the products, please see the description and Product User Ma
 
 # Step 2: Reading in the data
 
-Once the data set is available, *ncdf4* and *raster* packages functionalities are used to prepare it for resampling. Raw digital numbers (DN) stored in the netCFD files are used in order to avoid floating point imprecisions when scaling the values in R (R uses double-precision floating-point numbers of the  IEEE-754-Standard, whereas the values in the netCDF are stored as float32). DN values can be scaled into real physical values (PV) aftewards using the the formula PV = DN \* *scale* + *offset*, but keeping in mind that *scale* and *offset* must be those reported in each product documentation. 
+Once the data set is available, *ncdf4* and *raster* packages functionalities are used to prepare it for resampling. Raw digital numbers (DN) stored in the netCFD files are used in order to avoid floating point imprecisions when scaling the values into real physical values (PV). R uses IEEE-754-Standard double-precision floating-point numbers, whereas the values in the netCDF are stored as float32. DN values can be scaled into PV aftewards using the formula PV = DN \* *scale* + *offset*.
 
 The use of the *knitr* package is optional, it only helps with pretty-printing tables.
 
@@ -56,17 +56,16 @@ if (grepl(".nc$", ndvi_files[[1]])){
   lat <- ncvar_get(nc, "lat")
   #Copernicus nc files have lat/long belonging to the centre of the pixel, and R uses upper/left corner;
   #therefore, coordinates need to be adjusted
-  lon <- lon - (1/336)/2
+  lon <- lon - (1/336)/2                                   # 1/336 is the pixel resolution of the 333m product
   lat <- lat + (1/336)/2
-  nc_data <- ncvar_get(nc, "NDVI", raw_datavals = TRUE)
-  r <- raster(t(nc_data[, seq(dim(nc_data)[2], 1, -1)]))
+  nc_data <- ncvar_get(nc, "NDVI", raw_datavals = TRUE)    # raw_datavals = TRUE to avoid automatic scaling of DN
+  r <- raster(t(nc_data[, seq(dim(nc_data)[2], 1, -1)]))   # creating a raster object
   extent(r) <- c(range(lon)[1], (range(lon)[2] + (1/336)),
-                             (range(lat)[1] - (1/336)), range(lat)[2])
-  crs(r) <- CRS('+init=EPSG:4326')
+                 (range(lat)[1] - (1/336)), range(lat)[2]) # extent of the product 
+  crs(r) <- CRS('+init=EPSG:4326')                         # coordinate reference system
 }
 ```
-
-
+**Note:**  *raster::raster()* can also read *nc* files (using *ncdf4* functionalities), but Digital Numbers are automatically scaled to physical values. As said before, we want to avoid this because of floating point imprecisions.
 
 
 # Step 3: Checking the geographic extent and raster cropping
@@ -171,7 +170,6 @@ The range of valid pixel values, the scale factor and offset and any flag values
 
 For your convenience, a short table was prepared summarizing the range of valid values, both in raw digital number (DN) and physical value, for each product, version and data layer. Let’s read in this table from the csv file. 
 
-As said before, the physical or real value is computed as digital number * scale + offset, but this applies only for valid pixels.
 
 ```{r echo = FALSE}
 cutoff_method_df <- read.csv(paste0(getwd(), "/Table_cutoff_and_resampleMethod.csv"),
@@ -189,6 +187,28 @@ cutoff_flag <- 250
 r[r > cutoff_flag] <- NA
 ```
 
+&nbsp;
+
+Now we can scale the digital numbers into physical values. As said before, the physical or real value is computed as digital number * scale + offset, but this applies only for valid pixels.
+
+
+```{r}
+if (exists("nc")){
+  # Retrieving scale factor and offset from netCDF metadata
+  scale_fact <- nc$var$NDVI$scaleFact  
+  offset_val <- nc$var$NDVI$addOffset
+}else{
+  # They can be set manually as well
+  scale_fact <- 0.00400000018998981   # double-precision floating-point
+  offset_val <- -0.07999999821186066
+}
+
+r <- r * scale_fact + offset_val
+r  # To check that the values are correctly scaled (e.g. for NDVI between -0.08 and 0.92)
+
+```
+
+&nbsp;
 
 
 # Step 5: Resampling using the aggregation approach
@@ -262,9 +282,9 @@ r300m_resampled1km_Aggr <- aggregate(r,
                                      na.rm = TRUE, 
                                      filename = '')
 
-r300m_resampled1km_Aggr <- round(r300m_resampled1km_Aggr)
+# Only when working with Digital Numbers (not in physical values):
+# r300m_resampled1km_Aggr <- round(r300m_resampled1km_Aggr)
 ```
-
 
 
 # Step 6: Check the outcome and final remarks
